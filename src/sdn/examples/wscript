@@ -1,7 +1,6 @@
 # -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
 
 def build(bld):
-    obj.source = 'sdn-example.cc'
     obj = bld.create_ns3_program('sdn-example-dumbbell', ['core','network','applications','internet','layer2-p2p','point-to-point','netanim','sdn'])
     obj.env.append_value("LINKFLAGS", ["-L/usr/lib"])
     obj.env.append_value("LIB", ["fluid_msg"])
