@@ -1,0 +1,102 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+import os
+
+from waflib import Options
+
+def options(opt):
+    opt.add_option('--enable-sdn',
+		   help=('Enable SDN framework support'),
+		   dest='enable_sdn', action='store_true',
+                   default=False)
+
+def configure(conf):
+    if not Options.options.enable_sdn:
+	conf.msg("Checking for library libfluid (SDN support) location", False)
+	conf.report_optional_feature("sdn", "NS-3 SDN libfluid Integration", False,
+				     "SDN through libfluid not enabled (see options --enable-sdn)")
+        # Add this module to the list of modules that won't be built
+        # if they are enabled.
+        conf.env['MODULES_NOT_BUILT'].append('sdn')
+
+	return
+
+    test_code = '''
+#include <fluid/OFConnection.hh>
+#include <fluid/OFServer.hh>
+#include <fluid/OFServerSettings.hh>
+#include <fluid/TLS.hh>
+
+#include <fluid/of10msg.hh>
+#include <fluid/of13msg.hh>
+
+int main()
+{
+  return 0;
+}
+'''
+    conf.env['DL'] = conf.check(mandatory=True, lib='dl', define_name='DL', uselib_store='DL')
+
+    conf.env['SDN'] = conf.check_nonfatal(fragment=test_code, uselib='libfluid_base libfluid_msg')
+
+    if conf.env['SDN']:
+        conf.env['ENABLE_SDN'] = True
+        conf.env['LIBFLUID_BASE'] = conf.check(mandatory=True, lib='fluid_base', uselib_store='LIBFLUID_BASE')
+        conf.env['LIBFLUID_MSG'] = conf.check(mandatory=True, lib='fluid_msg', uselib_store='LIBFLUID_MSG')
+    else:
+        # Add this module to the list of modules that won't be built
+        # if they are enabled.
+        conf.env['MODULES_NOT_BUILT'].append('sdn')
+
+    conf.report_optional_feature("sdn", "NS-3 SDN libfluid Integration",
+                                 conf.env['SDN'], "libfluid library not found")
+    conf.env.append_value('NS3_MODULE_PATH',os.path.abspath(os.path.join("/usr/lib")))
+
+def build(bld):
+    # Don't do anything for this module if openflow's not enabled.
+    if 'sdn' in bld.env['MODULES_NOT_BUILT']:
+        return
+
+    module = bld.create_ns3_module('sdn',['core','network','applications','internet','mpi'])
+    module.source = [
+        'helper/sdn-helper.cc',
+        'model/SdnCommon.cc',
+        'model/SdnConnection.cc',
+        'model/SdnListener.cc',
+        'model/SdnSwitch.cc',
+        'model/SdnController.cc',
+        'model/Flow.cc',
+        'model/SdnFlowTable.cc',
+        'model/SdnPort.cc'
+        ]
+
+    module_test = bld.create_ns3_module_test_library('sdn')
+    module_test.source = [
+        'test/sdn-test-suite.cc',
+        ]
+
+    headers = bld(features='ns3header')
+    headers.module = 'sdn'
+    headers.source = [
+        'helper/sdn-helper.h',
+        'model/SdnCommon.h',
+        'model/SdnConnection.h',
+        'model/SdnListener.h',
+        'model/SdnSwitch.h',
+        'model/SdnController.h',
+        'model/Flow.h',
+        'model/SdnFlowTable.h',
+        'model/SdnPort.h',
+        ]
+
+    if bld.env['SDN'] and bld.env['DL']:
+        module.env.append_value("LINKFLAGS", ["-L/usr/lib"])
+        module.env.append_value("LIB", ["fluid_msg"])
+        module.env.append_value("LIB", ["fluid_base"])
+        module.use.extend(['DL','fluid_msg','fluid_base'])
+        module_test.use.extend(['DL','fluid_msg','fluid_base'])
+
+    if bld.env.ENABLE_EXAMPLES:
+        bld.recurse('examples')
+
+#    bld.ns3_python_bindings()

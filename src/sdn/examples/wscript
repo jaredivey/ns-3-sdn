@@ -1,0 +1,24 @@
+# -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    obj.source = 'sdn-example.cc'
+    obj = bld.create_ns3_program('sdn-example-dumbbell', ['core','network','applications','internet','layer2-p2p','point-to-point','netanim','sdn'])
+    obj.env.append_value("LINKFLAGS", ["-L/usr/lib"])
+    obj.env.append_value("LIB", ["fluid_msg"])
+    obj.env.append_value("LIB", ["fluid_base"])
+    obj.source = 'sdn-example-dumbbell.cc'
+    obj = bld.create_ns3_program('sdn-example-grid', ['core','network','applications','internet','layer2-p2p','point-to-point','netanim','sdn'])
+    obj.env.append_value("LINKFLAGS", ["-L/usr/lib"])
+    obj.env.append_value("LIB", ["fluid_msg"])
+    obj.env.append_value("LIB", ["fluid_base"])
+    obj.source = 'sdn-example-grid.cc'
+    obj = bld.create_ns3_program('sdn-dumbbell-distributed', ['core','network','applications','internet','layer2-p2p','point-to-point','sdn','mpi'])
+    obj.env.append_value("LINKFLAGS", ["-L/usr/lib"])
+    obj.env.append_value("LIB", ["fluid_msg"])
+    obj.env.append_value("LIB", ["fluid_base"])
+    obj.source = 'sdn-dumbbell-distributed.cc'
+    obj = bld.create_ns3_program('sdn-example-linear', ['core','network','applications','internet','layer2-p2p','point-to-point','netanim','sdn'])
+    obj.env.append_value("LINKFLAGS", ["-L/usr/lib"])
+    obj.env.append_value("LIB", ["fluid_msg"])
+    obj.env.append_value("LIB", ["fluid_base"])
+    obj.source = 'sdn-example-linear.cc'

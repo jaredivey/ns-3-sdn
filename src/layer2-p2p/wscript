@@ -1,0 +1,30 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+
+def build(bld):
+    module = bld.create_ns3_module('layer2-p2p', ['network', 'mpi'])
+    module.source = [
+        'model/layer2-p2p-net-device.cc',
+        'model/layer2-p2p-channel.cc',
+        'model/layer2-p2p-remote-channel.cc',
+        'helper/layer2-p2p-helper.cc',
+        ]
+
+    module_test = bld.create_ns3_module_test_library('layer2-p2p')
+    module_test.source = [
+        'test/layer2-p2p-test.cc',
+        ]
+
+    headers = bld(features='ns3header')
+    headers.module = 'layer2-p2p'
+    headers.source = [
+        'model/layer2-p2p-net-device.h',
+        'model/layer2-p2p-channel.h',
+        'model/layer2-p2p-remote-channel.h',
+        'helper/layer2-p2p-helper.h',
+        ]
+
+    if (bld.env['ENABLE_EXAMPLES']):
+        bld.recurse('examples')
+
+    bld.ns3_python_bindings()

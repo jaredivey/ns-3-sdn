@@ -1,0 +1,262 @@
+diff -r 20e19ee60c19 src/applications/model/onoff-application.cc
+--- a/src/applications/model/onoff-application.cc	Fri Dec 12 08:58:30 2014 -0800
++++ b/src/applications/model/onoff-application.cc	Wed Sep 16 10:44:43 2015 -0400
+@@ -23,6 +23,7 @@
+ // Adapted from ApplicationOnOff in GTNetS.
+ 
+ #include "ns3/log.h"
++#include "ns3/node-list.h"
+ #include "ns3/address.h"
+ #include "ns3/inet-socket-address.h"
+ #include "ns3/inet6-socket-address.h"
+@@ -93,7 +94,8 @@
+ 
+ 
+ OnOffApplication::OnOffApplication ()
+-  : m_socket (0),
++  : m_appDone (0),
++    m_socket (0),
+     m_connected (false),
+     m_residualBits (0),
+     m_lastStartTime (Seconds (0)),
+@@ -189,6 +191,33 @@
+     {
+       NS_LOG_WARN ("OnOffApplication found null socket to close in StopApplication");
+     }
++  
++  m_appDone = 1;
++  uint32_t numOnOff = 0;
++  uint32_t numDone = 0;
++  for (uint32_t i=0; i < NodeList::GetNNodes(); ++i)
++    {
++      Ptr<Node> curNode = NodeList::GetNode(i);
++      for (uint32_t j=0; j < curNode->GetNApplications (); ++j)
++	{
++	  Ptr<Application> curApp = curNode->GetApplication(j);
++	  Ptr<OnOffApplication> onOffApp = DynamicCast<OnOffApplication> (curApp);
++	  
++	  if (onOffApp)
++	    {
++	      ++numOnOff;
++	      if (onOffApp->m_appDone)
++		{
++		  ++numDone;
++		}
++	    }
++	}
++    }
++  
++  if (numOnOff > 0 && numOnOff == numDone)
++    {
++      Simulator::Stop(Seconds(1.0));
++    }
+ }
+ 
+ void OnOffApplication::CancelEvents ()
+diff -r 20e19ee60c19 src/applications/model/onoff-application.h
+--- a/src/applications/model/onoff-application.h	Fri Dec 12 08:58:30 2014 -0800
++++ b/src/applications/model/onoff-application.h	Wed Sep 16 10:44:43 2015 -0400
+@@ -121,6 +121,8 @@
+   */
+   int64_t AssignStreams (int64_t stream);
+ 
++  uint32_t m_appDone;
++
+ protected:
+   virtual void DoDispose (void);
+ private:
+diff -r 20e19ee60c19 src/applications/model/v4ping.cc
+--- a/src/applications/model/v4ping.cc	Fri Dec 12 08:58:30 2014 -0800
++++ b/src/applications/model/v4ping.cc	Wed Sep 16 10:44:43 2015 -0400
+@@ -15,6 +15,7 @@
+  */
+ 
+ #include "v4ping.h"
++#include "ns3/node-list.h"
+ #include "ns3/icmpv4.h"
+ #include "ns3/assert.h"
+ #include "ns3/log.h"
+@@ -29,8 +30,12 @@
+ namespace ns3 {
+ 
+ NS_LOG_COMPONENT_DEFINE ("V4Ping");
++
+ NS_OBJECT_ENSURE_REGISTERED (V4Ping);
+ 
++uint32_t V4Ping::m_totalSend = 0;
++uint32_t V4Ping::m_totalRecv = 0;
++
+ TypeId 
+ V4Ping::GetTypeId (void)
+ {
+@@ -55,9 +60,19 @@
+                    UintegerValue (56),
+                    MakeUintegerAccessor (&V4Ping::m_size),
+                    MakeUintegerChecker<uint32_t> (16))
+-    .AddTraceSource ("Rtt",
+-                     "The rtt calculated by the ping.",
+-                     MakeTraceSourceAccessor (&V4Ping::m_traceRtt));
++    .AddAttribute ("Count", "The number pings to send.",
++                   UintegerValue (1),
++                   MakeUintegerAccessor (&V4Ping::m_pingCount),
++                   MakeUintegerChecker<uint32_t> (0))
++    .AddAttribute ("PingAll",
++                   "Attempt to transmit a start out of each ping app on each node",
++                   BooleanValue (false),
++                   MakeBooleanAccessor (&V4Ping::m_pingAll),
++                   MakeBooleanChecker ())
++     .AddTraceSource ("Rtt",
++                      "The rtt calculated by the ping.",
++                      MakeTraceSourceAccessor (&V4Ping::m_traceRtt))
++    .SetGroupName("Applications")
+   ;
+   return tid;
+ }
+@@ -68,7 +83,9 @@
+     m_socket (0),
+     m_seq (0),
+     m_verbose (false),
+-    m_recv (0)
++    m_recv (0),
++	m_pingCount (0),
++    m_pingAll (false)
+ {
+   NS_LOG_FUNCTION (this);
+ }
+@@ -105,6 +122,10 @@
+ V4Ping::Receive (Ptr<Socket> socket)
+ {
+   NS_LOG_FUNCTION (this << socket);
++  if(m_stopEvent.IsRunning())
++  {
++    Simulator::Cancel(m_stopEvent);
++  }
+   while (m_socket->GetRxAvailable () > 0)
+     {
+       Address from;
+@@ -133,6 +154,8 @@
+               uint32_t appId;
+               if (dataSize == m_size)
+                 {
++                  Simulator::Cancel (m_stopEvent);
++
+                   echo.GetData ((uint8_t *)buf);
+                   Read32 ((const uint8_t *) &buf[0], nodeId);
+                   Read32 ((const uint8_t *) &buf[1], appId);
+@@ -147,6 +170,7 @@
+                       m_sent.erase (i);
+                       m_avgRtt.Update (delta.GetMilliSeconds ());
+                       m_recv++;
++                      m_totalRecv++;
+                       m_traceRtt (delta);
+ 
+                       if (m_verbose)
+@@ -162,6 +186,10 @@
+             }
+         }
+     }
++  if (m_pingCount <= m_recv)
++    {
++      Simulator::ScheduleNow(&V4Ping::StopApplication, this);
++    }
+ }
+ 
+ // Writes data to buffer in little-endian format; least significant byte
+@@ -189,11 +217,14 @@
+ {
+   NS_LOG_FUNCTION (this);
+ 
++  if (m_pingCount <= m_seq) return; //hacked out to keep us from sending more than 1 packet
++
+   NS_LOG_INFO ("m_seq=" << m_seq);
+   Ptr<Packet> p = Create<Packet> ();
+   Icmpv4Echo echo;
+   echo.SetSequenceNumber (m_seq);
+   m_seq++;
++  m_totalSend++;
+   echo.SetIdentifier (0);
+ 
+   //
+@@ -234,6 +265,11 @@
+ {
+   NS_LOG_FUNCTION (this);
+ 
++  if (m_pingAll)
++    {
++      m_stopEvent = Simulator::Schedule(Seconds(10*m_pingCount*m_interval.GetSeconds()),&V4Ping::StopApplication, this);
++    }
++
+   m_started = Simulator::Now ();
+   if (m_verbose)
+     {
+@@ -276,6 +312,48 @@
+            << " ms\n";
+       std::cout << os.str ();
+     }
++
++  if (m_pingAll)
++    {
++      uint32_t currentNode = NodeList::GetNNodes ();
++      uint32_t totalNodes = NodeList::GetNNodes ();
++      for (uint32_t i = 0; i < totalNodes; ++i)
++        {
++          if (GetNode() == NodeList::GetNode (i))
++            {
++              currentNode = i;
++            }
++        }
++
++      uint32_t currentApp = GetNode ()->GetNApplications ();
++      uint32_t totalApps = GetNode ()->GetNApplications ();
++      Ptr<Application> thisApp(this);
++      for (uint32_t i = 0; i < totalApps; ++i)
++        {
++          if (thisApp == GetNode ()->GetApplication (i))
++            {
++              currentApp = i;
++            }
++        }
++      ++currentApp;
++
++      for (currentNode = currentNode; currentNode < totalNodes; ++currentNode)
++        {
++          totalApps = NodeList::GetNode(currentNode)->GetNApplications();
++          for (uint32_t i = currentApp; i < totalApps; ++i)
++            {
++              Ptr<Application> thisApp = NodeList::GetNode(currentNode)->GetApplication(i);
++              Ptr<V4Ping> pingApp = DynamicCast<V4Ping> (thisApp);
++              if (pingApp)
++                {
++                  Simulator::ScheduleNow (&V4Ping::StartApplication, pingApp);
++                  return;
++                }
++            }
++          currentApp = 0;
++        }
++      Simulator::Stop();
++    }
+ }
+ 
+ 
+diff -r 20e19ee60c19 src/applications/model/v4ping.h
+--- a/src/applications/model/v4ping.h	Fri Dec 12 08:58:30 2014 -0800
++++ b/src/applications/model/v4ping.h	Wed Sep 16 10:44:43 2015 -0400
+@@ -54,6 +54,8 @@
+    */
+   V4Ping ();
+   virtual ~V4Ping ();
++  static uint32_t m_totalSend;
++  static uint32_t m_totalRecv;
+ 
+ private:
+   /**
+@@ -121,6 +123,9 @@
+   EventId m_next;
+   /// All sent but not answered packets. Map icmp seqno -> when sent
+   std::map<uint16_t, Time> m_sent;
++
++  uint32_t m_pingCount;
++  bool m_pingAll;
+ };
+ 
+ } // namespace ns3
