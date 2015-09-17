@@ -37,6 +37,8 @@ int main()
 '''
     conf.env['DL'] = conf.check(mandatory=True, lib='dl', define_name='DL', uselib_store='DL')
 
+    conf.env.append_value('NS3_MODULE_PATH',os.path.abspath(os.path.join("/usr/lib")))
+    conf.env.append_value('NS3_MODULE_PATH',os.path.abspath(os.path.join("$INSTALLDIR/lib")))
     conf.env['SDN'] = conf.check_nonfatal(fragment=test_code, uselib='libfluid_base libfluid_msg')
 
     if conf.env['SDN']:
@@ -50,7 +52,6 @@ int main()
 
     conf.report_optional_feature("sdn", "NS-3 SDN libfluid Integration",
                                  conf.env['SDN'], "libfluid library not found")
-    conf.env.append_value('NS3_MODULE_PATH',os.path.abspath(os.path.join("/usr/lib")))
 
 def build(bld):
     # Don't do anything for this module if openflow's not enabled.
