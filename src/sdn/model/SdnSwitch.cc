@@ -772,12 +772,12 @@ void SdnSwitch::SendPacketInToController(Ptr<Packet> packet, Ptr<NetDevice> devi
 
       m_packetBuffers[newId] = packet->Copy ();
       packetIn = new fluid_msg::of10::PacketIn(SdnCommon::GenerateXId(),
-    	  newId, packet->GetSize(), port->getPortNumber(), reason);
+    	  newId, port->getPortNumber(), packet->GetSize(), reason);
     }
   else
     {
       packetIn = new fluid_msg::of10::PacketIn(SdnCommon::GenerateXId(),
-    	  -1, packet->GetSize(), port->getPortNumber(), reason);
+    	  -1, port->getPortNumber(), packet->GetSize(), reason);
     }
   uint8_t buffer[packet->GetSize ()];
   packet->CopyData (buffer,packet->GetSize ());
