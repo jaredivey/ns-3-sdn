@@ -80,7 +80,7 @@ void flood_discovery_packetsGlobal (void* arg);
 class STPApps: public MultiLearningSwitch {
 
 public:
-    STPApps (void) {
+    STPApps (void) : started (false) {
       xIDs = 0;
       lldpAddress = fluid_msg::EthAddress(LLDP_DISCOVERY_ADDRESS);
       state = STPS_FREE;
@@ -117,7 +117,8 @@ public:
     //Table definition here
     //List of switches. Sorted by DPID. Needs to get all the links on that 
     struct STPSwitch {
-      bool alive = true;
+      STPSwitch () : alive (true) {}
+      bool alive;
       Ptr<SdnConnection> switchConn;
       uint64_t DPID;
       uint64_t discoverySentTime;
@@ -146,7 +147,7 @@ public:
 
     //LLDP address in ethaddress form
     fluid_msg::EthAddress lldpAddress;
-    bool started = false;
+    bool started;
 
     struct cmp_DPID {
       //comparator by a switches DPID
