@@ -42,6 +42,10 @@ namespace ns3 {
 
 #define MAX_BUFFERS 1000000000
 
+#ifndef INT16_MAX
+#define INT16_MAX 32767
+#endif
+
 NS_LOG_COMPONENT_DEFINE ("SdnSwitch");
 
 NS_OBJECT_ENSURE_REGISTERED (SdnSwitch);
