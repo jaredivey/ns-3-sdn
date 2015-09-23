@@ -151,7 +151,7 @@ private:
   std::set<Flow, cmp_priority> m_flow_table_rules; //!< The actual set of all flows in the flow table. Sorted by priority
   uint8_t m_tableid;                               //!< Unique ID for flow tables
   uint32_t m_wildcards;                            //!< Wildcard rules for matches to ignore. NOT IMPLEMENTED
-  template <class T> struct TempHeader { TempHeader() : isEmpty(true), header() {} bool isEmpty = true; T header; };
+  template <class T> struct TempHeader { TempHeader() : isEmpty(true), header() {} bool isEmpty; T header; };
   TempHeader<EthernetHeader>  m_ethHeader;         //!< Private EthernetHeader for grabbing information out of the packet
   TempHeader<Ipv4Header> m_ipv4Header;             //!< Private Ipv4Header for grabbing information out of the packet
   TempHeader<Icmpv4Header> m_icmpv4Header;         //!< Private Icmpv4Header for grabbing information out of the packet
