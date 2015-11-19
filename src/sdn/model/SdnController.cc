@@ -173,7 +173,7 @@ SdnController::HandleRead (Ptr<Socket> socket)
               OFHandle_Features_Reply (socket, featuresReply);
 
               // With the connection established, report SwitchUpEvent to the SdnListener.
-              std::cout << Simulator::Now ().GetSeconds () << " SWITCH_UP_EVENT" << std::endl;
+              NS_LOG_INFO( Simulator::Now ().GetSeconds () << " SWITCH_UP_EVENT" );
               SwitchUpEvent* sue = new SwitchUpEvent (c, (void*)featuresReply->pack(), featuresReply->length());
               Simulator::ScheduleNow ( &SdnListener::event_callback, event_listener, sue);
             }

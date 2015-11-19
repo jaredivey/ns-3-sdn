@@ -29,6 +29,7 @@
 #include <vector>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "ns3/core-module.h"
 #include "ns3/point-to-point-module.h"
@@ -54,13 +55,47 @@ typedef struct timeval TIMER_TYPE;
 #define TIMER_SECONDS(_t) ((double)(_t).tv_sec + (_t).tv_usec * 1e-6)
 #define TIMER_DIFF(_t1, _t2) (TIMER_SECONDS (_t1) - TIMER_SECONDS (_t2))
 
+unsigned long
+ReportMemoryUsage()
+{
+  pid_t pid;
+  char work[4096];
+  FILE* f;
+  char* pCh;
+
+  pid = getpid();
+  sprintf(work, "/proc/%d/stat", (int)pid);
+  f = fopen(work, "r");
+  if (f == NULL)
+    {
+      std::cout <<"Can't open " << work << std::endl;
+      return(0);
+    }
+  if(fgets(work, sizeof(work), f) == NULL)
+    std::cout << "Error with fgets" << std::endl;
+  fclose(f);
+  strtok(work, " ");
+  for (int i = 1; i < 23; i++)
+    {
+      pCh = strtok(NULL, " ");
+    }
+  return(atol(pCh));
+}
+
+unsigned long
+ReportMemoryUsageMB()
+{
+  unsigned long u = ReportMemoryUsage();
+  return ((u + 500000) / 1000000 );
+}
+
 NS_LOG_COMPONENT_DEFINE ("sdn-example-linear");
 
 enum APPCHOICE
 {
   BULK_SEND,
-  PING,
   ON_OFF,
+  PING,
 } APPCHOICE;
 
 enum ControllerApplication
@@ -73,13 +108,13 @@ int
 main (int argc, char *argv[])
 {
   bool verbose = true;
-  uint32_t maxBytes = 500000;
+  uint32_t maxBytes = 5120;
   uint32_t controllerApplication = MSG_APPS;
   uint32_t appChoice = ON_OFF;
 
-  uint32_t numHosts    = 2;
-  uint32_t numSwitches = 1;
-  uint32_t numControllers = 1;
+  uint32_t numHosts    = 90;
+  uint32_t numSwitches = 24;
+  uint32_t numControllers = 8;
 
   std::ostringstream oss;
 
@@ -177,7 +212,7 @@ main (int argc, char *argv[])
 
   oss.str ("");
   oss << "10.0.0.0";
-  ipv4.SetBase (oss.str ().c_str (), "255.255.255.0");
+  ipv4.SetBase (oss.str ().c_str (), "255.0.0.0");
 
   for (uint32_t i=0; i < leftHostToSwitchContainers.size(); ++i)
     {
@@ -204,8 +239,8 @@ main (int argc, char *argv[])
   for (uint32_t i=0; i < switchToControllerContainers.size(); ++i)
     {
       oss.str ("");
-      oss << "192.168." << i+1 << ".0";
-      ipv4.SetBase (oss.str ().c_str (), "255.255.255.0");
+      oss << "192." << i+168 << ".0.0";
+      ipv4.SetBase (oss.str ().c_str (), "255.255.0.0");
       switchToControllerIPContainers.push_back(ipv4.Assign (switchToControllerContainers[i]));
     }
 
@@ -215,10 +250,11 @@ main (int argc, char *argv[])
 
   Ptr<UniformRandomVariable> randTime = CreateObject<UniformRandomVariable>();
   randTime->SetAttribute ("Min", DoubleValue(30));
-  randTime->SetAttribute ("Max", DoubleValue(60));
+  randTime->SetAttribute ("Max", DoubleValue(360));
 
   for (uint32_t i = 0; i < leftNodes.GetN(); ++i)
     {
+	  double startTime = randTime->GetValue ();
       if (appChoice == BULK_SEND)
         {
           ApplicationContainer sourceApp;
@@ -232,59 +268,8 @@ main (int argc, char *argv[])
           source.SetAttribute ("MaxBytes", UintegerValue (maxBytes));
 
           sourceApp = source.Install (leftNodes.Get (i));
-          sourceApp.Start (Seconds (randTime->GetValue()));
+          sourceApp.Start (Seconds (startTime));
           sourceApps.Add(sourceApp);
-        }
-      else if (appChoice == PING)
-        {
-          for (uint32_t j = 0; j < numHosts; ++j)
-            {
-              NS_LOG_INFO ("PING app to address: " << rightHostToSwitchIPContainers[j].GetAddress(1));
-              V4PingHelper source1 (rightHostToSwitchIPContainers[j].GetAddress(1));
-              source1.SetAttribute ("Verbose", BooleanValue (true));
-              source1.SetAttribute ("PingAll", BooleanValue (true));
-              source1.SetAttribute ("Count", UintegerValue (1));
-
-              NS_LOG_INFO ("PING app to address: " << leftHostToSwitchIPContainers[j].GetAddress(0));
-              V4PingHelper source2 (leftHostToSwitchIPContainers[j].GetAddress(0));
-              source2.SetAttribute ("Verbose", BooleanValue (true));
-              source2.SetAttribute ("PingAll", BooleanValue (true));
-              source2.SetAttribute ("Count", UintegerValue (1));
-
-              ApplicationContainer sourceAppL2R;
-              sourceAppL2R = source1.Install (leftNodes.Get (i));
-              if ((i == 0) && (j == 0))
-                {
-                  sourceAppL2R.Start (Seconds (randTime->GetValue()));
-                  sourceApps.Add(sourceAppL2R);
-                }
-              else
-                {
-                  sourceAppL2R.Start (Seconds (REALLY_BIG_TIME));
-                  sourceApps.Add(sourceAppL2R);
-                }
-
-              ApplicationContainer sourceAppL2L;
-              if (i != j)
-                {
-                  sourceAppL2L = source2.Install (leftNodes.Get (i));
-                  sourceAppL2L.Start (Seconds (REALLY_BIG_TIME));
-                  sourceApps.Add(sourceAppL2L);
-                }
-
-              ApplicationContainer sourceAppR2L;
-              sourceAppR2L = source2.Install (rightNodes.Get (i));
-              sourceAppR2L.Start (Seconds (REALLY_BIG_TIME));
-              sourceApps.Add(sourceAppR2L);
-
-              ApplicationContainer sourceAppR2R;
-              if (i != j)
-                {
-                  sourceAppR2R = source1.Install (rightNodes.Get (i));
-                  sourceAppR2R.Start (Seconds (REALLY_BIG_TIME));
-                  sourceApps.Add(sourceAppR2R);
-                }
-            }
         }
       else if (appChoice == ON_OFF)
         {
@@ -298,9 +283,60 @@ main (int argc, char *argv[])
           source.SetAttribute ("MaxBytes", UintegerValue (maxBytes));
 
           sourceApp = source.Install (leftNodes.Get (i));
-          sourceApp.Start (Seconds (randTime->GetValue()));
+          sourceApp.Start (Seconds (startTime));
           sourceApps.Add(sourceApp);
         }
+//      else if (appChoice == PING)
+//        {
+//          for (uint32_t j = 0; j < numHosts; ++j)
+//            {
+//              NS_LOG_INFO ("PING app to address: " << rightHostToSwitchIPContainers[j].GetAddress(1));
+//              V4PingHelper source1 (rightHostToSwitchIPContainers[j].GetAddress(1));
+//              source1.SetAttribute ("Verbose", BooleanValue (true));
+//              source1.SetAttribute ("PingAll", BooleanValue (true));
+//              source1.SetAttribute ("Count", UintegerValue (1));
+//
+//              NS_LOG_INFO ("PING app to address: " << leftHostToSwitchIPContainers[j].GetAddress(0));
+//              V4PingHelper source2 (leftHostToSwitchIPContainers[j].GetAddress(0));
+//              source2.SetAttribute ("Verbose", BooleanValue (true));
+//              source2.SetAttribute ("PingAll", BooleanValue (true));
+//              source2.SetAttribute ("Count", UintegerValue (1));
+//
+//              ApplicationContainer sourceAppL2R;
+//              sourceAppL2R = source1.Install (leftNodes.Get (i));
+//              if ((i == 0) && (j == 0))
+//                {
+//                  sourceAppL2R.Start (Seconds (randTime->GetValue()));
+//                  sourceApps.Add(sourceAppL2R);
+//                }
+//              else
+//                {
+//                  sourceAppL2R.Start (Seconds (REALLY_BIG_TIME));
+//                  sourceApps.Add(sourceAppL2R);
+//                }
+//
+//              ApplicationContainer sourceAppL2L;
+//              if (i != j)
+//                {
+//                  sourceAppL2L = source2.Install (leftNodes.Get (i));
+//                  sourceAppL2L.Start (Seconds (REALLY_BIG_TIME));
+//                  sourceApps.Add(sourceAppL2L);
+//                }
+//
+//              ApplicationContainer sourceAppR2L;
+//              sourceAppR2L = source2.Install (rightNodes.Get (i));
+//              sourceAppR2L.Start (Seconds (REALLY_BIG_TIME));
+//              sourceApps.Add(sourceAppR2L);
+//
+//              ApplicationContainer sourceAppR2R;
+//              if (i != j)
+//                {
+//                  sourceAppR2R = source1.Install (rightNodes.Get (i));
+//                  sourceAppR2R.Start (Seconds (REALLY_BIG_TIME));
+//                  sourceApps.Add(sourceAppR2R);
+//                }
+//            }
+//        }
     }
 
 //
@@ -333,7 +369,7 @@ main (int argc, char *argv[])
   for (uint32_t j = 0; j < switchNodes.GetN(); ++j)
     {
       Ptr<SdnSwitch> sdnS = CreateObject<SdnSwitch> ();
-      sdnS->SetStartTime (Seconds (j + 1.0 + 0.1*(double)(j)));
+      sdnS->SetStartTime (Seconds ((double)(j)*0.1));
       switchNodes.Get (j)->AddApplication (sdnS);
     }
 
@@ -343,6 +379,7 @@ main (int argc, char *argv[])
   NS_LOG_INFO ("Run Simulation.");
   TIMER_NOW (t1);
 
+  Simulator::Stop (Seconds(480));
   Simulator::Run ();
   TIMER_NOW (t2);
 
@@ -359,10 +396,20 @@ main (int argc, char *argv[])
   double simTime = Simulator::Now().GetSeconds();
   double d1 = TIMER_DIFF (t1, t0) + TIMER_DIFF (t2, t1);
 
+  unsigned long memUse = ReportMemoryUsageMB ();
+
+  uint32_t allTotalRx = 0;
+  unsigned long allMemUse = 0;
+  double maxTimeDiff = 0.0;
+
+  allTotalRx = totalRx;
+  allMemUse = memUse;
+  maxTimeDiff = d1;
+
   std::cout << "SIM\t" << numControllers << "\t" << numSwitches << "\t";
-  std::cout << numHosts << "\t" << simTime << "\t" << d1;
-  std::cout << "\t" << totalRx;
-  std::cout << "\t" << (V4Ping::m_totalSend - V4Ping::m_totalRecv);
-  std::cout << "\t" << V4Ping::m_totalSend << "\t" << V4Ping::m_totalRecv << std::endl;
+  std::cout << numHosts << "\t" << simTime << "\t";
+  std::cout << allTotalRx << "\t" << allMemUse << "\t" << maxTimeDiff << std::endl;
+//  std::cout << "\t" << (V4Ping::m_totalSend - V4Ping::m_totalRecv);
+//  std::cout << "\t" << V4Ping::m_totalSend << "\t" << V4Ping::m_totalRecv << std::endl;
   return 0;
 }
