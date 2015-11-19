@@ -333,7 +333,24 @@ SdnConnection::filter (Ptr<Packet> p, Address *src, Address *dst, uint16_t *type
     }
 
   copyPacket->RemoveHeader (header);
-  copyPacket->RemoveTrailer (trailer);
+
+  PacketMetadata metadata (copyPacket->GetUid (),copyPacket->GetSize ());
+  PacketMetadata::ItemIterator iterator = copyPacket->BeginItem ();
+  PacketMetadata::Item item;
+  bool has_trailer = false;
+  while (iterator.HasNext ())
+    {
+	    item = iterator.Next ();
+	    if (item.type == PacketMetadata::Item::TRAILER)
+	      {
+		      has_trailer = true;
+	 	      break;
+	      }
+    }
+  if (has_trailer)
+    {
+	    copyPacket->RemoveTrailer (trailer);
+    }
 
   NS_LOG_LOGIC ("Pkt source is " << header.GetSource ());
   NS_LOG_LOGIC ("Pkt destination is " << header.GetDestination ());
@@ -345,27 +362,27 @@ SdnConnection::filter (Ptr<Packet> p, Address *src, Address *dst, uint16_t *type
   // will also have an 802.2 LLC header.  If greater than 1500, we
   // find the protocol number (Ethernet type) directly.
   //
-  if (header.GetLengthType () <= 1500)
-    {
-      *src = header.GetSource ();
-      *dst = header.GetDestination ();
-
-      pktSize = copyPacket->GetSize ();
-      LlcSnapHeader llc;
-      if (pktSize < llc.GetSerializedSize ())
-        {
-          return 0;
-        }
-
-      copyPacket->RemoveHeader (llc);
-      *type = llc.GetType ();
-    }
-  else
-    {
+//  if (header.GetLengthType () <= 1500)
+//    {
+//      *src = header.GetSource ();
+//      *dst = header.GetDestination ();
+//
+//      pktSize = copyPacket->GetSize ();
+//      LlcSnapHeader llc;
+//      if (pktSize < llc.GetSerializedSize ())
+//        {
+//          return 0;
+//        }
+//
+//      copyPacket->RemoveHeader (llc);
+//      *type = llc.GetType ();
+//    }
+//  else
+//    {
       *src = header.GetSource ();
       *dst = header.GetDestination ();
       *type = header.GetLengthType ();
-    }
+//    }
 
   //
   // What we give back is a packet without the Ethernet header (nor the 

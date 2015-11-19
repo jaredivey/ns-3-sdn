@@ -101,7 +101,7 @@ Layer2P2PHelper::EnablePcapInternal (std::string prefix, Ptr<NetDevice> nd, bool
     }
 
   Ptr<PcapFileWrapper> file = pcapHelper.CreateFile (filename, std::ios::out, 
-                                                     PcapHelper::DLT_PPP);
+                                                     PcapHelper::DLT_EN10MB);
   pcapHelper.HookDefaultSink<Layer2P2PNetDevice> (device, "PromiscSniffer", file);
 }
 
