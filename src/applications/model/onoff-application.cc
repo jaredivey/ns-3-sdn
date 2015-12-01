@@ -192,32 +192,32 @@ void OnOffApplication::StopApplication () // Called at time specified by Stop
       NS_LOG_WARN ("OnOffApplication found null socket to close in StopApplication");
     }
   
-//  m_appDone = 1;
-//  uint32_t numOnOff = 0;
-//  uint32_t numDone = 0;
-//  for (uint32_t i=0; i < NodeList::GetNNodes(); ++i)
-//    {
-//      Ptr<Node> curNode = NodeList::GetNode(i);
-//      for (uint32_t j=0; j < curNode->GetNApplications (); ++j)
-//	{
-//	  Ptr<Application> curApp = curNode->GetApplication(j);
-//	  Ptr<OnOffApplication> onOffApp = DynamicCast<OnOffApplication> (curApp);
-//
-//	  if (onOffApp)
-//	    {
-//	      ++numOnOff;
-//	      if (onOffApp->m_appDone)
-//		{
-//		  ++numDone;
-//		}
-//	    }
-//	}
-//    }
-//
-//  if (numOnOff > 0 && numOnOff == numDone)
-//    {
-//      Simulator::Stop(Seconds(1.0));
-//    }
+  m_appDone = 1;
+  uint32_t numOnOff = 0;
+  uint32_t numDone = 0;
+  for (uint32_t i=0; i < NodeList::GetNNodes(); ++i)
+    {
+      Ptr<Node> curNode = NodeList::GetNode(i);
+      for (uint32_t j=0; j < curNode->GetNApplications (); ++j)
+	{
+	  Ptr<Application> curApp = curNode->GetApplication(j);
+	  Ptr<OnOffApplication> onOffApp = DynamicCast<OnOffApplication> (curApp);
+
+	  if (onOffApp)
+	    {
+	      ++numOnOff;
+	      if (onOffApp->m_appDone)
+		{
+		  ++numDone;
+		}
+	    }
+	}
+    }
+
+  if (numOnOff > 0 && numOnOff == numDone)
+    {
+      Simulator::Stop(Seconds(1.0));
+    }
 }
 
 void OnOffApplication::CancelEvents ()
