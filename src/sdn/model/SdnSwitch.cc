@@ -743,6 +743,11 @@ void SdnSwitch::OFHandle_Packet_Out(uint8_t* buffer)
       Flood(packet, packetOut->in_port());
       return;
     }
+  if (outPort == fluid_msg::of10::OFPP_TABLE)
+    {
+	  HandlePacket (packet, packetOut->in_port());
+	  return;
+    }
   if (m_portMap.count(outPort) != 0)
     {
       Ptr<SdnPort> outputPort = m_portMap[outPort]; //Might be wrong?
