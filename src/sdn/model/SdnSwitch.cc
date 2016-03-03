@@ -366,34 +366,38 @@ bool SdnSwitch::HandleReadFromNetDevice (Ptr<NetDevice> device, Ptr<const Packet
 bool SdnSwitch::HandlePacket (Ptr<Packet>packet, uint16_t inPort)
 {
   NS_LOG_FUNCTION (this << packet << inPort);
-  uint16_t outPort = m_flowTable.handlePacket (packet, inPort);
+  std::vector<uint16_t> outPorts = m_flowTable.handlePacket (packet, inPort);
 
   //Handle packet in message
-  if ((outPort == fluid_msg::of10::OFPP_NONE) && m_portMap.count(inPort))
+  if (outPorts.empty() && m_portMap.count(inPort))
     {
       SendPacketInToController(packet, m_portMap[inPort]->getDevice (), fluid_msg::of10::OFPR_NO_MATCH);
       return 1;
     }
-  if ((outPort == fluid_msg::of10::OFPP_CONTROLLER) && m_portMap.count(inPort))
-    {
-      SendPacketInToController(packet, m_portMap[inPort]->getDevice (), fluid_msg::of10::OFPR_ACTION);
-      return 1;
-    }
-  //Handle flooding
-  if(outPort == fluid_msg::of10::OFPP_FLOOD)
-    {
-      Flood(packet, inPort);
-      return 1;
-    }
   //Send out on port assuming it's enabled
-  if (m_portMap.count (outPort) != 0)
-    {
-      Ptr<SdnPort> portStruct = m_portMap[outPort];
-      if(portStruct && !(portStruct->getConfig() & (fluid_msg::of10::OFPPC_PORT_DOWN | fluid_msg::of10::OFPPC_NO_RECV | fluid_msg::of10::OFPPC_NO_FWD)))
-        {
-          return (portStruct->getConn()->sendOnNetDevice (packet) != 0);
-        }
-    }
+  for (std::vector<uint16_t>::iterator outPort = outPorts.begin(); outPort != outPorts.end(); ++outPort)
+  {
+    if ((*outPort == fluid_msg::of10::OFPP_CONTROLLER) && m_portMap.count(inPort))
+      {
+        SendPacketInToController(packet, m_portMap[inPort]->getDevice (), fluid_msg::of10::OFPR_ACTION);
+        return 1;
+      }
+    //Handle flooding
+    if(*outPort == fluid_msg::of10::OFPP_FLOOD)
+      {
+        Flood(packet, inPort);
+        return 1;
+      }
+    //Handle packet output
+    if (m_portMap.count (*outPort) != 0)
+      {
+        Ptr<SdnPort> portStruct = m_portMap[*outPort];
+        if(portStruct && !(portStruct->getConfig() & (fluid_msg::of10::OFPPC_PORT_DOWN | fluid_msg::of10::OFPPC_NO_RECV | fluid_msg::of10::OFPPC_NO_FWD)))
+          {
+            portStruct->getConn()->sendOnNetDevice (packet);
+          }
+      }
+  }
   return 0;
 }
 

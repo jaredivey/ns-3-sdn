@@ -1579,7 +1579,7 @@ AnimationInterface::WriteLinkProperties ()
             }
           std::string channelType = ch->GetInstanceTypeId ().GetName ();
           NS_LOG_DEBUG ("Got ChannelType" << channelType);
-          if (channelType == std::string ("ns3::PointToPointChannel"))
+          if (channelType == std::string ("ns3::PointToPointChannel") || channelType == std::string ("ns3::Layer2P2PChannel"))
             { // Since these are duplex links, we only need to dump
               // if srcid < dstid
               uint32_t nChDev = ch->GetNDevices ();

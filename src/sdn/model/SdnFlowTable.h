@@ -70,9 +70,9 @@ public:
   /**
    * \brief reads a packet and commits the actions given the flows in the flow table
    * \param pkt The packet to read
-   * \return The port number the switch must outport the packet from. If no outport is discerned, a value of OFPP_NONE is returned
+   * \return The ports  the switch must outport the packet from. If no outport is discerned, the vector will be empty
    */
-  uint16_t handlePacket (Ptr<Packet> pkt, uint16_t inPort);
+  std::vector<uint16_t> handlePacket (Ptr<Packet> pkt, uint16_t inPort);
   /**
    * \brief Getter for tableID
    * \return tableID

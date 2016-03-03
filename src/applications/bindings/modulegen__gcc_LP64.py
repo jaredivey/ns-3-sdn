@@ -92,8 +92,6 @@ def register_types(module):
     root_module['ns3::Ipv6Address'].implicitly_converts_to(root_module['ns3::Address'])
     ## ipv6-address.h (module 'network'): ns3::Ipv6Prefix [class]
     module.add_class('Ipv6Prefix', import_from_module='ns.network')
-    ## l2-packet-sink-helper.h (module 'applications'): ns3::L2PacketSinkHelper [class]
-    module.add_class('L2PacketSinkHelper')
     ## mac16-address.h (module 'network'): ns3::Mac16Address [class]
     module.add_class('Mac16Address', import_from_module='ns.network')
     ## mac16-address.h (module 'network'): ns3::Mac16Address [class]
@@ -400,8 +398,6 @@ def register_types(module):
     module.add_class('Ipv6PrefixChecker', import_from_module='ns.network', parent=root_module['ns3::AttributeChecker'])
     ## ipv6-address.h (module 'network'): ns3::Ipv6PrefixValue [class]
     module.add_class('Ipv6PrefixValue', import_from_module='ns.network', parent=root_module['ns3::AttributeValue'])
-    ## l2-packet-sink.h (module 'applications'): ns3::L2PacketSink [class]
-    module.add_class('L2PacketSink', parent=root_module['ns3::Application'])
     ## error-model.h (module 'network'): ns3::ListErrorModel [class]
     module.add_class('ListErrorModel', import_from_module='ns.network', parent=root_module['ns3::ErrorModel'])
     ## random-variable-stream.h (module 'core'): ns3::LogNormalRandomVariable [class]
@@ -654,7 +650,6 @@ def register_methods(root_module):
     register_Ns3Ipv4Mask_methods(root_module, root_module['ns3::Ipv4Mask'])
     register_Ns3Ipv6Address_methods(root_module, root_module['ns3::Ipv6Address'])
     register_Ns3Ipv6Prefix_methods(root_module, root_module['ns3::Ipv6Prefix'])
-    register_Ns3L2PacketSinkHelper_methods(root_module, root_module['ns3::L2PacketSinkHelper'])
     register_Ns3Mac16Address_methods(root_module, root_module['ns3::Mac16Address'])
     register_Ns3Mac48Address_methods(root_module, root_module['ns3::Mac48Address'])
     register_Ns3Mac64Address_methods(root_module, root_module['ns3::Mac64Address'])
@@ -791,7 +786,6 @@ def register_methods(root_module):
     register_Ns3Ipv6AddressValue_methods(root_module, root_module['ns3::Ipv6AddressValue'])
     register_Ns3Ipv6PrefixChecker_methods(root_module, root_module['ns3::Ipv6PrefixChecker'])
     register_Ns3Ipv6PrefixValue_methods(root_module, root_module['ns3::Ipv6PrefixValue'])
-    register_Ns3L2PacketSink_methods(root_module, root_module['ns3::L2PacketSink'])
     register_Ns3ListErrorModel_methods(root_module, root_module['ns3::ListErrorModel'])
     register_Ns3LogNormalRandomVariable_methods(root_module, root_module['ns3::LogNormalRandomVariable'])
     register_Ns3Mac16AddressChecker_methods(root_module, root_module['ns3::Mac16AddressChecker'])
@@ -2348,32 +2342,6 @@ def register_Ns3Ipv6Prefix_methods(root_module, cls):
                    'void', 
                    [param('std::ostream &', 'os')], 
                    is_const=True)
-    return
-
-def register_Ns3L2PacketSinkHelper_methods(root_module, cls):
-    ## l2-packet-sink-helper.h (module 'applications'): ns3::L2PacketSinkHelper::L2PacketSinkHelper(ns3::L2PacketSinkHelper const & arg0) [copy constructor]
-    cls.add_constructor([param('ns3::L2PacketSinkHelper const &', 'arg0')])
-    ## l2-packet-sink-helper.h (module 'applications'): ns3::L2PacketSinkHelper::L2PacketSinkHelper(std::string protocol) [constructor]
-    cls.add_constructor([param('std::string', 'protocol')])
-    ## l2-packet-sink-helper.h (module 'applications'): ns3::ApplicationContainer ns3::L2PacketSinkHelper::Install(ns3::NodeContainer c) const [member function]
-    cls.add_method('Install', 
-                   'ns3::ApplicationContainer', 
-                   [param('ns3::NodeContainer', 'c')], 
-                   is_const=True)
-    ## l2-packet-sink-helper.h (module 'applications'): ns3::ApplicationContainer ns3::L2PacketSinkHelper::Install(ns3::Ptr<ns3::Node> node) const [member function]
-    cls.add_method('Install', 
-                   'ns3::ApplicationContainer', 
-                   [param('ns3::Ptr< ns3::Node >', 'node')], 
-                   is_const=True)
-    ## l2-packet-sink-helper.h (module 'applications'): ns3::ApplicationContainer ns3::L2PacketSinkHelper::Install(std::string nodeName) const [member function]
-    cls.add_method('Install', 
-                   'ns3::ApplicationContainer', 
-                   [param('std::string', 'nodeName')], 
-                   is_const=True)
-    ## l2-packet-sink-helper.h (module 'applications'): void ns3::L2PacketSinkHelper::SetAttribute(std::string name, ns3::AttributeValue const & value) [member function]
-    cls.add_method('SetAttribute', 
-                   'void', 
-                   [param('std::string', 'name'), param('ns3::AttributeValue const &', 'value')])
     return
 
 def register_Ns3Mac16Address_methods(root_module, cls):
@@ -7613,38 +7581,6 @@ def register_Ns3Ipv6PrefixValue_methods(root_module, cls):
                    [param('ns3::Ipv6Prefix const &', 'value')])
     return
 
-def register_Ns3L2PacketSink_methods(root_module, cls):
-    ## l2-packet-sink.h (module 'applications'): ns3::L2PacketSink::L2PacketSink(ns3::L2PacketSink const & arg0) [copy constructor]
-    cls.add_constructor([param('ns3::L2PacketSink const &', 'arg0')])
-    ## l2-packet-sink.h (module 'applications'): ns3::L2PacketSink::L2PacketSink() [constructor]
-    cls.add_constructor([])
-    ## l2-packet-sink.h (module 'applications'): uint32_t ns3::L2PacketSink::GetTotalRx() const [member function]
-    cls.add_method('GetTotalRx', 
-                   'uint32_t', 
-                   [], 
-                   is_const=True)
-    ## l2-packet-sink.h (module 'applications'): static ns3::TypeId ns3::L2PacketSink::GetTypeId() [member function]
-    cls.add_method('GetTypeId', 
-                   'ns3::TypeId', 
-                   [], 
-                   is_static=True)
-    ## l2-packet-sink.h (module 'applications'): void ns3::L2PacketSink::DoDispose() [member function]
-    cls.add_method('DoDispose', 
-                   'void', 
-                   [], 
-                   visibility='protected', is_virtual=True)
-    ## l2-packet-sink.h (module 'applications'): void ns3::L2PacketSink::StartApplication() [member function]
-    cls.add_method('StartApplication', 
-                   'void', 
-                   [], 
-                   visibility='private', is_virtual=True)
-    ## l2-packet-sink.h (module 'applications'): void ns3::L2PacketSink::StopApplication() [member function]
-    cls.add_method('StopApplication', 
-                   'void', 
-                   [], 
-                   visibility='private', is_virtual=True)
-    return
-
 def register_Ns3ListErrorModel_methods(root_module, cls):
     ## error-model.h (module 'network'): ns3::ListErrorModel::ListErrorModel(ns3::ListErrorModel const & arg0) [copy constructor]
     cls.add_constructor([param('ns3::ListErrorModel const &', 'arg0')])
@@ -8331,6 +8267,8 @@ def register_Ns3OnOffApplication_methods(root_module, cls):
     cls.add_method('SetMaxBytes', 
                    'void', 
                    [param('uint32_t', 'maxBytes')])
+    ## onoff-application.h (module 'applications'): ns3::OnOffApplication::m_appDone [variable]
+    cls.add_instance_attribute('m_appDone', 'uint32_t', is_const=False)
     ## onoff-application.h (module 'applications'): void ns3::OnOffApplication::DoDispose() [member function]
     cls.add_method('DoDispose', 
                    'void', 

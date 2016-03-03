@@ -40,20 +40,19 @@ SdnFlowTable::flows ()
 }
 
 //Returns the out port. If not, return OFPP_NONE
-uint16_t
+std::vector<uint16_t>
 SdnFlowTable::handlePacket (Ptr<Packet> pkt, uint16_t inPort)
 {
   DestructHeader (pkt);
   fluid_msg::of10::Match inputFields = getPacketFields (inPort);
   std::set<Flow, cmp_priority>::iterator flow_rule = m_flow_table_rules.begin ();
-  uint16_t outPort = fluid_msg::of10::OFPP_NONE;
+  std::vector<uint16_t> outPorts;
   for (std::set<Flow, cmp_priority>::iterator i = m_flow_table_rules.begin (); i != m_flow_table_rules.end (); i++)
     {
       m_lookup_count++;
       Flow tempFlow = *i;
       if (Flow::pkt_match (tempFlow,inputFields))
         {
-          outPort = 0; // Initialize in case of no actions.
           m_matched_count++;
           tempFlow.packet_count_++;
           tempFlow.byte_count_ += pkt->GetSize ();
@@ -63,7 +62,8 @@ SdnFlowTable::handlePacket (Ptr<Packet> pkt, uint16_t inPort)
               fluid_msg::Action* action = *j;
               if (action->type () == fluid_msg::of10::OFPAT_OUTPUT)
                 {
-                  outPort = handleAction (pkt,action);
+                  uint16_t outPort = handleAction (pkt,action);
+                  outPorts.push_back(outPort);
                 }
               else
                 {
@@ -78,7 +78,7 @@ SdnFlowTable::handlePacket (Ptr<Packet> pkt, uint16_t inPort)
         }
     }
   RestructHeader (pkt);
-  return outPort;
+  return outPorts;
 }
 
 //Need to rewrite to make header objects that serialize the iterator, then use their attributes.
