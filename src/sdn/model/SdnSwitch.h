@@ -378,6 +378,8 @@ private:
   Ptr<UniformRandomVariable> m_bufferIdStream;
   std::map< uint32_t, Ptr<Packet> > m_packetBuffers;
 
+  bool m_kernel; //!< Use the Linux kernel stack (DCE-only)
+
   void ConnectionSucceeded (Ptr<Socket> socket);
   void ConnectionFailed (Ptr<Socket> socket);
 };

@@ -58,6 +58,11 @@ TypeId SdnSwitch::GetTypeId (void)
   static TypeId tid = TypeId ("ns3::SdnSwitch")
     .SetParent<Application> ()
     .AddConstructor<SdnSwitch> ()
+    .AddAttribute ("Kernel",
+                   "Use the Linux kernel for establishing connections.",
+                   BooleanValue (false),
+                   MakeBooleanAccessor (&SdnSwitch::m_kernel),
+                   MakeBooleanChecker ())
   ;
   return tid;
 }
@@ -77,6 +82,8 @@ SdnSwitch::SdnSwitch () : m_flowTable(this)
   m_bufferIdStream->SetAttribute("Min", DoubleValue(0.0));
   m_bufferIdStream->SetAttribute("Max", DoubleValue(MAX_BUFFERS));
   m_switchFeatures.n_buffers = MAX_BUFFERS;
+
+  m_kernel = false;
 }
 
 SdnSwitch::~SdnSwitch ()
@@ -170,6 +177,10 @@ void SdnSwitch::EstablishControllerConnection (Ptr<NetDevice> device,
 
   // Create a socket for this switch.
   TypeId tid = TypeId::LookupByName ("ns3::TcpSocketFactory");
+  if (m_kernel)
+    {
+	  tid = TypeId::LookupByName ("ns3::LinuxTcpSocketFactory");
+    }
   Ptr<Socket> socket = Socket::CreateSocket (GetNode (), tid);
 
   NS_ASSERT_MSG (Ipv4Address::IsMatchingType (remoteAddress),
@@ -182,7 +193,9 @@ void SdnSwitch::EstablishControllerConnection (Ptr<NetDevice> device,
   socket->SetConnectCallback (
 	MakeCallback (&SdnSwitch::ConnectionSucceeded, this),
 	MakeCallback (&SdnSwitch::ConnectionFailed, this));
-  NS_ASSERT (socket->Connect (b) == 0);
+  //NS_ASSERT (socket->Connect (b) == 0);
+  socket->Connect (b);
+  NS_ASSERT (socket->GetErrno() < Socket::ERROR_NOTCONN);
 
   m_controllerConn = CreateObject<SdnConnection> (device, socket);
 }
@@ -198,6 +211,10 @@ void SdnSwitch::EstablishConnection (Ptr<NetDevice> device,
   uint16_t switchPort = SdnSwitch::getNewPortNumber ();
 
   TypeId tid = TypeId::LookupByName ("ns3::Ipv4RawSocketFactory");
+  if (m_kernel)
+    {
+	  tid = TypeId::LookupByName ("ns3::LinuxIpv4RawSocketFactory");
+    }
   Ptr<Socket> socket = Socket::CreateSocket (GetNode (), tid);
   socket->SetAttribute ("Protocol", UintegerValue (17));
 

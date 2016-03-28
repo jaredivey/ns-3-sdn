@@ -333,7 +333,7 @@ Layer2P2PNetDevice::TransmitStart (Ptr<Packet> p)
   Time txCompleteTime = txTime + m_tInterframeGap;
 
   NS_LOG_LOGIC ("Schedule TransmitCompleteEvent in " << txCompleteTime.GetSeconds () << "sec");
-  Simulator::Schedule (txCompleteTime, &Layer2P2PNetDevice::TransmitComplete, this);
+  Simulator::ScheduleWithContext (GetNode()->GetId(), txCompleteTime, &Layer2P2PNetDevice::TransmitComplete, this);
 
   bool result = m_channel->TransmitStart (p, this, txTime);
   if (result == false)

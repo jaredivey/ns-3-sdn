@@ -69,6 +69,11 @@ V4Ping::GetTypeId (void)
                    BooleanValue (false),
                    MakeBooleanAccessor (&V4Ping::m_pingAll),
                    MakeBooleanChecker ())
+	.AddAttribute ("Kernel",
+				   "Use the Linux kernel for establishing connections.",
+				   BooleanValue (false),
+				   MakeBooleanAccessor (&V4Ping::m_kernel),
+				   MakeBooleanChecker ())
      .AddTraceSource ("Rtt",
                       "The rtt calculated by the ping.",
                       MakeTraceSourceAccessor (&V4Ping::m_traceRtt))
@@ -276,7 +281,14 @@ V4Ping::StartApplication (void)
       std::cout << "PING  " << m_remote << " 56(84) bytes of data.\n";
     }
 
-  m_socket = Socket::CreateSocket (GetNode (), TypeId::LookupByName ("ns3::Ipv4RawSocketFactory"));
+  if (m_kernel)
+  {
+	  m_socket = Socket::CreateSocket (GetNode (), TypeId::LookupByName ("ns3::LinuxIpv4RawSocketFactory"));
+  }
+  else
+  {
+	  m_socket = Socket::CreateSocket (GetNode (), TypeId::LookupByName ("ns3::Ipv4RawSocketFactory"));
+  }
   NS_ASSERT (m_socket != 0);
   m_socket->SetAttribute ("Protocol", UintegerValue (1)); // icmp
   m_socket->SetRecvCallback (MakeCallback (&V4Ping::Receive, this));

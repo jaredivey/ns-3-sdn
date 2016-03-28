@@ -126,6 +126,7 @@ private:
 
   uint32_t m_pingCount;
   bool m_pingAll;
+  bool m_kernel;
 };
 
 } // namespace ns3

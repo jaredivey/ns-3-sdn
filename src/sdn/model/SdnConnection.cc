@@ -249,7 +249,7 @@ SdnConnection::send(Ptr<Packet> p)
     if (currentTime == m_lastSendTime)
       {
         m_consecutivePause++;
-        Simulator::Schedule (MicroSeconds (m_consecutivePause),
+        Simulator::ScheduleWithContext (m_id, MicroSeconds (m_consecutivePause),
         	&SdnConnection::StaggerSend, this, copyPacket);
         return copyPacket->GetSize ();
       }
@@ -293,7 +293,7 @@ SdnConnection::sendOnNetDevice (Ptr<Packet> p)
   if (currentTime == m_lastSendTime)
     {
       m_consecutivePause++;
-      Simulator::Schedule (TimeStep (m_consecutivePause),
+      Simulator::ScheduleWithContext (m_id, TimeStep (m_consecutivePause),
 	      &SdnConnection::StaggerSendOnNetDevice, this, p);
       return p->GetSize();
     }
