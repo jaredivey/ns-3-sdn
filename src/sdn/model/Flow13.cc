@@ -117,10 +117,10 @@ match_ (fluid_msg::of13::Match a, fluid_msg::of13::Match b, match_func cur_func)
 		const fluid_msg::of13::OXMTLV &const_bptr = *(b.oxm_field(j));
 		if (aptr)
 		{
-			alen -= a.oxm_fields_len();
+			alen -= aptr->length ();
 			if (bptr)
 			{
-				blen -= b.oxm_fields_len();
+				blen -= bptr->length ();
 				if (aptr->class_ () == fluid_msg::of13::OFPXMC_OPENFLOW_BASIC &&
 						bptr->class_ () == fluid_msg::of13::OFPXMC_OPENFLOW_BASIC)
 				{
