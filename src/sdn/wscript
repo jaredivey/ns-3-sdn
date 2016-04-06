@@ -64,10 +64,12 @@ def build(bld):
         'model/SdnConnection.cc',
         'model/SdnListener.cc',
         'model/SdnSwitch.cc',
+        'model/SdnSwitch13.cc',
         'model/SdnController.cc',
         'model/Flow.cc',
         'model/Flow13.cc',
         'model/SdnFlowTable.cc',
+        'model/SdnFlowTable13.cc',
         'model/SdnPort.cc'
         ]
 
@@ -84,10 +86,12 @@ def build(bld):
         'model/SdnConnection.h',
         'model/SdnListener.h',
         'model/SdnSwitch.h',
+        'model/SdnSwitch13.h',
         'model/SdnController.h',
         'model/Flow.h',
         'model/Flow13.h',
         'model/SdnFlowTable.h',
+        'model/SdnFlowTable13.h',
         'model/SdnPort.h',
         ]
 

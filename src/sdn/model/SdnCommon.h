@@ -45,10 +45,6 @@
 #include <map>
 namespace ns3 {
 
-//Openflow global definitions
-#define OFVERSION 0x01 //Openflow version 10
-#define OFCONTROLLERPORT 6633 //Openflow version 10 port
-
 class Socket;
 class Packet;
 

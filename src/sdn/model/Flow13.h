@@ -115,6 +115,7 @@ public:
   EventId idle_timeout_event;    //!< An NS3 event to fire a timeout if the idle time is reached
   EventId hard_timeout_event;    //!< An NS3 event to fire a timeout if the hard time is reached
   fluid_msg::of13::Match match;  //!< A libfluid match object of packets features we match
+  fluid_msg::of13::InstructionSet instructions;
   fluid_msg::ActionList actions; //!< A libfluid ActionList (vector of actions) to apply to a packet. Only applies if the match is correct
   
 
