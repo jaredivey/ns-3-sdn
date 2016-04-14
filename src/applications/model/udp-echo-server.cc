@@ -32,6 +32,12 @@
 
 #include "udp-echo-server.h"
 
+ //edit
+ #include "ns3/packet-bcolor-tag.h"
+ #include "ns3/packet-gcolor-tag.h"
+ #include "ns3/packet-rcolor-tag.h"
+
+
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("UdpEchoServerApplication");
@@ -162,6 +168,16 @@ UdpEchoServer::HandleRead (Ptr<Socket> socket)
 
       packet->RemoveAllPacketTags ();
       packet->RemoveAllByteTags ();
+ //edit
+   RColorTag rcolor;
+   rcolor.SetRColorValue(0);
+   packet->AddPacketTag(rcolor);
+   GColorTag gcolor;
+   gcolor.SetGColorValue(0);
+   packet->AddPacketTag(gcolor);
+   BColorTag bcolor;
+   bcolor.SetBColorValue(255);
+   packet->AddPacketTag(bcolor);
 
       NS_LOG_LOGIC ("Echoing packet");
       socket->SendTo (packet, 0, from);

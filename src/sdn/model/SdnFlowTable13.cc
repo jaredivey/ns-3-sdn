@@ -142,64 +142,149 @@ SdnFlowTable13::handlePacket (Ptr<Packet> pkt, fluid_msg::ActionSet *action_set,
 fluid_msg::of13::Match
 SdnFlowTable13::getPacketFields (uint32_t inPort)
 {
-  fluid_msg::of13::Match match;
-//  match.in_port (inPort);
-//  if (!m_tcpHeader.isEmpty) //TCP case
-//    {
-//      match.tp_src (m_tcpHeader.header.GetSourcePort ());
-//      match.tp_dst (m_tcpHeader.header.GetDestinationPort ());
-//    }
-//  if (!m_udpHeader.isEmpty) //UDP case
-//    {
-//      match.tp_src (m_udpHeader.header.GetSourcePort ());
-//      match.tp_dst (m_udpHeader.header.GetDestinationPort ());
-//    }
-//  if (!m_ipv4Header.isEmpty) //IPv4 case
-//    {
-//      match.nw_tos (m_ipv4Header.header.GetTos ()); //zero out the last 2 bits that are ignored by the ToS
-//      if (!match.nw_proto ())
-//        {
-//          match.nw_proto (m_ipv4Header.header.GetProtocol ());
-//        }
-//      match.nw_src (fluid_msg::IPAddress (m_ipv4Header.header.GetSource ().Get ()));
-//      match.nw_dst (fluid_msg::IPAddress (m_ipv4Header.header.GetDestination ().Get ()));
-//
-//      if ((m_ipv4Header.header.GetProtocol () == 1) && (!m_icmpv4Header.isEmpty))
-//	{
-//	  match.tp_src (m_icmpv4Header.header.GetType ());
-//	  match.tp_dst (m_icmpv4Header.header.GetCode ());
-//	}
-//    }
-//  if (!m_ipv6Header.isEmpty) //IPv6 case
-//    {
-//      uint8_t sourceBuffer[16];
-//      m_ipv6Header.header.GetSourceAddress ().GetBytes (sourceBuffer);
-//      match.nw_src (fluid_msg::IPAddress (sourceBuffer));
-//      uint8_t destinationBuffer[16];
-//      m_ipv6Header.header.GetDestinationAddress ().GetBytes (destinationBuffer);
-//      match.nw_dst (fluid_msg::IPAddress (destinationBuffer));
-//    }
-//  if (!m_arpHeader.isEmpty) //Arp case
-//    {
-//      match.nw_proto ((uint8_t)(m_arpHeader.header.IsRequest () ? ArpHeader::ARP_TYPE_REQUEST : ArpHeader::ARP_TYPE_REPLY));
-//
-//      match.nw_src (fluid_msg::IPAddress (m_arpHeader.header.GetSourceIpv4Address ().Get ()));
-//      match.nw_dst (fluid_msg::IPAddress (m_arpHeader.header.GetDestinationIpv4Address ().Get ()));
-//    }
-//  if (!m_ethHeader.isEmpty) //IPv6 case
-//    {
-//      uint8_t srcAddr[6];
-//      m_ethHeader.header.GetSource ().CopyTo (srcAddr);
-//      uint8_t dstAddr[6];
-//      m_ethHeader.header.GetDestination ().CopyTo (dstAddr);
-//      match.dl_src (fluid_msg::EthAddress (srcAddr));
-//      match.dl_dst (fluid_msg::EthAddress (dstAddr));
-//      match.dl_type(m_ethHeader.header.GetLengthType ());
-//
-//      //No VLAN header accessor yet
-//      match.dl_vlan (0);
-//    }
-  return match;
+ 	 fluid_msg::of13::Match match;
+ 
+ 	  fluid_msg::of13::InPort *InPort_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IN_PORT);
+ 	  InPort_oxmtlv->value(inPort);
+ 	  match.add_oxm_field(InPort_oxmtlv);
+ 
+ 	  if (!m_tcpHeader.isEmpty) //TCP case
+ 	    {
+ 	      fluid_msg::of13::TCPDst *Dst_oxmtlv = match.make_oxm_tlv (fluid_msg::of13::OFPXMT_OFB_TCP_DST);
+ 	      Dst_oxmtlv -> value(m_tcpHeader.header.GetDestinationPort());
+ 	      match.add_oxm_field(Dst_oxmtlv);
+ 
+ 	      fluid_msg::of13::TCPSrc *Src_oxmtlv = match.make_oxm_tlv (fluid_msg::of13::OFPXMT_OFB_TCP_SRC);
+ 	      Src_oxmtlv -> value(m_tcpHeader.header.GetSourcePort());
+ 	      match.add_oxm_field(Src_oxmtlv);
+ 	    }
+ 	  if (!m_udpHeader.isEmpty) //UDP case
+ 	    {
+ 	      fluid_msg::of13::UDPDst *Dst_oxmtlv = match.make_oxm_tlv (fluid_msg::of13::OFPXMT_OFB_UDP_DST);
+ 	      Dst_oxmtlv -> value(m_udpHeader.header.GetDestinationPort());
+ 	      match.add_oxm_field(Dst_oxmtlv);
+ 
+ 	      fluid_msg::of13::UDPSrc *Src_oxmtlv = match.make_oxm_tlv (fluid_msg::of13::OFPXMT_OFB_UDP_SRC);
+ 	      Src_oxmtlv -> value(m_udpHeader.header.GetSourcePort());
+ 	      match.add_oxm_field(Src_oxmtlv);
+ 	    }
+ 
+ 	  if (!m_ipv4Header.isEmpty) //IPv4 case
+ 	    {
+ 		  fluid_msg::of13::IPDSCP *Dscp_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IP_DSCP);
+ 		  Dscp_oxmtlv->value(m_ipv4Header.header.GetDscp());
+ 		  match.add_oxm_field(Dscp_oxmtlv);
+ 
+ 		  fluid_msg::of13::IPECN *Ecn_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IP_ECN);
+ 		  Ecn_oxmtlv->value(m_ipv4Header.header.GetEcn());
+ 		  match.add_oxm_field(Ecn_oxmtlv);
+ 
+ 	      if (!match.ip_proto ())
+ 	        {
+ 	    	  fluid_msg::of13::IPProto *IPpro_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IP_PROTO);
+ 	    	  Ecn_oxmtlv->value(m_ipv4Header.header.GetProtocol());
+ 	    	  match.add_oxm_field(IPpro_oxmtlv);
+ 	        }
+ 
+ 		  fluid_msg::of13::IPv4Src *Src_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV4_SRC);
+ 		  Src_oxmtlv->value(m_ipv4Header.header.GetSource().Get());
+ 		  match.add_oxm_field(Src_oxmtlv);
+ 
+ 		  fluid_msg::of13::IPv4Src *Dst_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV4_DST);
+ 		  Dst_oxmtlv->value(m_ipv4Header.header.GetDestination().Get());
+ 		  match.add_oxm_field(Dst_oxmtlv);
+ 
+ 
+ 	      if ((m_ipv4Header.header.GetProtocol () == 1) && (!m_icmpv4Header.isEmpty))
+ 		    {
+ 	    	  fluid_msg::of13::ICMPv4Type *Type_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ICMPV4_TYPE);
+ 	    	  Type_oxmtlv->value(m_icmpv4Header.header.GetType ());
+ 	    	  match.add_oxm_field(Type_oxmtlv);
+ 
+ 	    	  fluid_msg::of13::ICMPv4Code *Code_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ICMPV4_CODE);
+ 	    	  Type_oxmtlv->value(m_icmpv4Header.header.GetCode ());
+ 	    	  match.add_oxm_field(Code_oxmtlv);
+ 		    }
+ 	    }
+ 	  if (!m_ipv6Header.isEmpty) //IPv6 case
+ 	    {
+ 	      uint8_t sourceBuffer[16];
+ 	      m_ipv6Header.header.GetSourceAddress ().GetBytes (sourceBuffer);
+ 		  fluid_msg::of13::IPv6Src *Src_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV6_SRC);
+ 		  Src_oxmtlv->value(sourceBuffer);
+ 		  match.add_oxm_field(Src_oxmtlv);
+ 
+ 	      uint8_t destinationBuffer[16];
+ 	      m_ipv6Header.header.GetDestinationAddress ().GetBytes (destinationBuffer);
+ 		  fluid_msg::of13::IPv6Dst *Dst_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV6_DST);
+ 		  Dst_oxmtlv->value(destinationBuffer);
+ 		  match.add_oxm_field(Dst_oxmtlv);
+ 
+ 		  fluid_msg::of13::IPV6Flabel *Flabel_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV6_FLABEL);
+ 		  Flabel_oxmtlv->value(m_ipv6Header.header.GetFlowLabel());
+ 		  match.add_oxm_field(Flabel_oxmtlv);
+ 
+ 
+ 	    }
+ 	  if (!m_arpHeader.isEmpty) //Arp case
+ 	    {
+ 
+ 		  fluid_msg::of13::ARPOp *Op_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_OP);
+ 		  Op_oxmtlv->value((uint16_t)m_arpHeader.header.IsRequest () ? ArpHeader::ARP_TYPE_REQUEST: ArpHeader::ARP_TYPE_REPLY);
+ 		  match.add_oxm_field(Op_oxmtlv); //????
+ 
+ 
+ 	      //match.nw_proto ((uint8_t)(m_arpHeader.header.IsRequest () ? ArpHeader::ARP_TYPE_REQUEST : ArpHeader::ARP_TYPE_REPLY));
+ 
+ 		  fluid_msg::of13::ARPSPA *SPA_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_SPA);
+ 		  SPA_oxmtlv->value(m_arpHeader.header.GetSourceIpv4Address().Get());
+ 		  match.add_oxm_field(SPA_oxmtlv);
+ 
+ 		  fluid_msg::of13::ARPTPA *TPA_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_TPA);
+ 		  TPA_oxmtlv->value(m_arpHeader.header.GetDestinationIpv4Address().Get());
+ 		  match.add_oxm_field(TPA_oxmtlv);
+ 
+ 		  uint8_t srcAddr[6];
+ 		  m_arpHeader.header.GetSourceHardwareAddress().CopyTo(srcAddr);
+ 		  fluid_msg::of13::ARPSHA *SHA_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_SHA);
+ 		  SHA_oxmtlv->value(srcAddr);
+ 		  match.add_oxm_field(SHA_oxmtlv);
+ 
+ 		  uint8_t dstAddr[6];
+ 		  m_arpHeader.header.GetDestinationHardwareAddress().CopyTo(dstAddr);
+ 		  fluid_msg::of13::ARPTHA *THA_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_THA);
+ 		  THA_oxmtlv->value(dstAddr);
+ 		  match.add_oxm_field(THA_oxmtlv);
+ 
+ 	    }
+ 	  if (!m_ethHeader.isEmpty) //Ethernet case
+ 	    {
+ 	      uint8_t srcAddr[6];
+ 	      m_ethHeader.header.GetSource ().CopyTo (srcAddr);
+ 	      uint8_t dstAddr[6];
+ 	      m_ethHeader.header.GetDestination ().CopyTo (dstAddr);
+ 
+ 		  fluid_msg::of13::EthSrc *Src_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ETH_SRC);
+ 		  Src_oxmtlv->value(srcAddr);
+ 		  match.add_oxm_field(Src_oxmtlv);
+ 
+ 		  fluid_msg::of13::EthDst *Dst_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ETH_DST);
+ 		  Dst_oxmtlv->value(dstAddr);
+ 		  match.add_oxm_field(Dst_oxmtlv);
+ 
+ 		  fluid_msg::of13::EthType *Type_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ETH_TYPE);
+ 		  Type_oxmtlv->value(m_ethHeader.header.GetLengthType ());
+ 		  match.add_oxm_field(Type_oxmtlv);
+ 
+ 
+ 	      //No VLAN header accessor yet
+ 		  fluid_msg::of13::VLANVid *Vid_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_VLAN_VID);
+ 		  Vid_oxmtlv->value(0);
+ 		  match.add_oxm_field(Vid_oxmtlv);
+ 
+ 
+ 	    }
+ 	  return match;
 }
 
 std::vector<Flow13>

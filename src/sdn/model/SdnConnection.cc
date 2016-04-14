@@ -18,6 +18,9 @@
  */
 
 #include "SdnConnection.h"
+  #include "ns3/packet-bcolor-tag.h"
+  #include "ns3/packet-gcolor-tag.h"
+  #include "ns3/packet-rcolor-tag.h"
 
 namespace ns3 {
 
@@ -246,6 +249,16 @@ SdnConnection::send(Ptr<Packet> p)
 {
     Time currentTime = Simulator::Now ();
     Ptr<Packet> copyPacket = p->Copy ();
+   RColorTag rcolor;
+    rcolor.SetRColorValue(255);
+    copyPacket->AddPacketTag(rcolor);
+    GColorTag gcolor;
+    gcolor.SetGColorValue(0);
+    copyPacket->AddPacketTag(gcolor);
+    BColorTag bcolor;
+    bcolor.SetBColorValue(255);
+    copyPacket->AddPacketTag(bcolor);
+ 
     if (currentTime == m_lastSendTime)
       {
         m_consecutivePause++;

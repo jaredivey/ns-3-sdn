@@ -53,6 +53,14 @@
 #include <math.h>
 #include <algorithm>
 
+ 
+ //edit
+ #include "ns3/packet-bcolor-tag.h"
+ #include "ns3/packet-gcolor-tag.h"
+ #include "ns3/packet-rcolor-tag.h"
+ 
+
+
 NS_LOG_COMPONENT_DEFINE ("TcpSocketBase");
 
 namespace ns3 {
@@ -1620,6 +1628,17 @@ TcpSocketBase::SendEmptyPacket (uint8_t flags)
 {
   NS_LOG_FUNCTION (this << (uint32_t)flags);
   Ptr<Packet> p = Create<Packet> ();
+   RColorTag rcolor;
+   rcolor.SetRColorValue(255);
+   p->AddPacketTag(rcolor);
+   GColorTag gcolor;
+   gcolor.SetGColorValue(0);
+   p->AddPacketTag(gcolor);
+   BColorTag bcolor;
+   bcolor.SetBColorValue(0);
+   p->AddPacketTag(bcolor);
+ 
+
   TcpHeader header;
   SequenceNumber32 s = m_nextTxSequence;
 

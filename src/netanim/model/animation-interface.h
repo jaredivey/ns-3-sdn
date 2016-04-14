@@ -783,7 +783,7 @@ private:
   void WriteXmlNode (uint32_t id, uint32_t sysId, double locX, double locY);
   void WriteXmlLink (uint32_t fromId, uint32_t toLp, uint32_t toId);
   void WriteXmlUpdateLink (uint32_t fromId, uint32_t toId, std::string);
-  void WriteXmlP (std::string pktType, 
+ void WriteXmlP (Ptr<const Packet> p, std::string pktType, 
                                  uint32_t fId, 
                                  double fbTx, 
                                  double lbTx, 

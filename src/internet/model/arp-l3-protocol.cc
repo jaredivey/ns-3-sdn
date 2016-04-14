@@ -32,6 +32,14 @@
 #include "arp-cache.h"
 #include "ipv4-interface.h"
 
+ //edit
+ #include "ns3/packet-bcolor-tag.h"
+ #include "ns3/packet-gcolor-tag.h"
+ #include "ns3/packet-rcolor-tag.h"
+ 
+ 
+
+
 NS_LOG_COMPONENT_DEFINE ("ArpL3Protocol");
 
 namespace ns3 {
@@ -335,6 +343,20 @@ ArpL3Protocol::SendArpRequest (Ptr<const ArpCache> cache, Ipv4Address to)
   Ipv4Header header;
   header.SetDestination (to);
   Ptr<Packet> packet = Create<Packet> ();
+ 
+ 
+ //edit
+   RColorTag rcolor;
+   rcolor.SetRColorValue(0);
+   packet->AddPacketTag(rcolor);
+   GColorTag gcolor;
+   gcolor.SetGColorValue(255);
+   packet->AddPacketTag(gcolor);
+   BColorTag bcolor;
+   bcolor.SetBColorValue(0);
+   packet->AddPacketTag(bcolor);
+ 
+
   Ipv4Address source = ipv4->SelectSourceAddress (device,  to, Ipv4InterfaceAddress::GLOBAL);
   NS_LOG_LOGIC ("ARP: sending request from node "<<m_node->GetId ()<<
                 " || src: " << device->GetAddress () << " / " << source <<
@@ -356,6 +378,20 @@ ArpL3Protocol::SendArpReply (Ptr<const ArpCache> cache, Ipv4Address myIp, Ipv4Ad
   arp.SetReply (cache->GetDevice ()->GetAddress (), myIp, toMac, toIp);
   Ptr<Packet> packet = Create<Packet> ();
   packet->AddHeader (arp);
+ 
+ //edit
+   RColorTag rcolor;
+   rcolor.SetRColorValue(0);
+   packet->AddPacketTag(rcolor);
+   GColorTag gcolor;
+   gcolor.SetGColorValue(255);
+   packet->AddPacketTag(gcolor);
+   BColorTag bcolor;
+   bcolor.SetBColorValue(0);
+   packet->AddPacketTag(bcolor);
+ 
+ 
+ 
   cache->GetDevice ()->Send (packet, toMac, PROT_NUMBER);
 }
 

@@ -29,6 +29,12 @@
 #include "ns3/trace-source-accessor.h"
 #include "udp-echo-client.h"
 
+ //edit
+ #include "ns3/packet-bcolor-tag.h"
+ #include "ns3/packet-gcolor-tag.h"
+ #include "ns3/packet-rcolor-tag.h"
+ 
+
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("UdpEchoClientApplication");
@@ -308,6 +314,18 @@ UdpEchoClient::Send (void)
   // so that tags added to the packet can be sent as well
   m_txTrace (p);
   m_socket->Send (p);
+ 
+   //edit
+   RColorTag rcolor;
+   rcolor.SetRColorValue(0);
+   p->AddPacketTag(rcolor);
+   GColorTag gcolor;
+   gcolor.SetGColorValue(0);
+   p->AddPacketTag(gcolor);
+   BColorTag bcolor;
+   bcolor.SetBColorValue(255);
+   p->AddPacketTag(bcolor);
+ 
 
   ++m_sent;
 

@@ -51,6 +51,12 @@
 #include "ns3/ipv4-routing-protocol.h"
 #include "ns3/energy-source-container.h"
 
+ #include "ns3/tag.h"
+ #include "ns3/packet-rcolor-tag.h"
+ #include "ns3/packet-gcolor-tag.h"
+ #include "ns3/packet-bcolor-tag.h"
+
+
 NS_LOG_COMPONENT_DEFINE ("AnimationInterface");
 
 namespace ns3 {
@@ -751,7 +757,7 @@ AnimationInterface::DevTxTrace (std::string context,
   double fbRx = (now + rxTime - txTime).GetSeconds ();
   double lbRx = (now + rxTime).GetSeconds ();
   CheckMaxPktsPerTraceFile ();
-  WriteXmlP ("p", 
+   WriteXmlP (p,"p", 
              tx->GetNode ()->GetId (), 
              fbTx, 
              lbTx, 
@@ -2190,7 +2196,7 @@ AnimationInterface::WriteXmlP (uint64_t animUid, std::string pktType, uint32_t t
 }
 
 void 
-AnimationInterface::WriteXmlP (std::string pktType, uint32_t fId, double fbTx, double lbTx, 
+AnimationInterface::WriteXmlP (Ptr<const Packet> p, std::string pktType, uint32_t fId, double fbTx, double lbTx, 
                                                    uint32_t tId, double fbRx, double lbRx, std::string metaInfo)
 {
   AnimXmlElement element (pktType);
@@ -2206,6 +2212,50 @@ AnimationInterface::WriteXmlP (std::string pktType, uint32_t fId, double fbTx, d
   element.AddAttribute ("lbRx", lbRx);
   element.Close ();
   WriteN (element.GetElementString (),  m_f);
+
+ //change node color if the rgb value is specified in the packet tag
+  RColorTag Rcolor;
+  GColorTag Gcolor;
+  BColorTag Bcolor;
+ 
+  if (p->PeekPacketTag(Rcolor)& p->PeekPacketTag(Gcolor)& p->PeekPacketTag(Bcolor)){
+ 
+     std::ostringstream LinkColor;
+     LinkColor<<"LinkColor:"<<(uint32_t)Rcolor.GetRColorValue()<<","<<(uint32_t)Gcolor.GetGColorValue()<<","<<(uint32_t)Bcolor.GetBColorValue();
+     AnimXmlElement element2 ("linkupdate");
+     element2.AddAttribute ("t", fbTx);
+     element2.AddAttribute ("fromId", std::min(fId,tId));
+     element2.AddAttribute ("toId", std::max(fId,tId));
+     element2.AddAttribute ("ld", LinkColor.str());
+     element2.Close ();
+     WriteN (element2.GetElementString (), m_f);
+ 
+     std::ostringstream LinkColor2;
+     LinkColor2<<"LinkColor:"<<0<<","<<0<<","<<0;
+     AnimXmlElement element3 ("linkupdate");
+     element3.AddAttribute ("t", lbRx);
+     element3.AddAttribute ("fromId", std::min(fId,tId));
+     element3.AddAttribute ("toId", std::max(fId,tId));
+     element3.AddAttribute ("ld", LinkColor2.str());
+     element3.Close ();
+     WriteN (element3.GetElementString (), m_f);
+ 
+ }
+  else{
+ 
+     std::ostringstream LinkColor;
+     LinkColor<<"LinkColor:"<<0<<","<<0<<","<<0;
+     AnimXmlElement element2 ("linkupdate");
+     element2.AddAttribute ("t", fbTx);
+     element2.AddAttribute ("fromId", std::min(fId,tId));
+     element2.AddAttribute ("toId", std::max(fId,tId));
+     element2.AddAttribute ("ld", LinkColor.str());
+     element2.Close ();
+     WriteN (element2.GetElementString (), m_f);
+ }
+ 
+ 
+
 }
 
 void 

@@ -43,6 +43,11 @@
 #include "ns3/string.h"
 #include "ns3/pointer.h"
 
+
+ #include "ns3/packet-bcolor-tag.h"
+ #include "ns3/packet-gcolor-tag.h"
+ #include "ns3/packet-rcolor-tag.h"
+
 NS_LOG_COMPONENT_DEFINE ("OnOffApplication");
 
 namespace ns3 {
@@ -301,6 +306,17 @@ void OnOffApplication::SendPacket ()
   Ptr<Packet> packet = Create<Packet> (m_pktSize);
   m_txTrace (packet);
   m_socket->Send (packet);
+   //edit
+   RColorTag rcolor;
+   rcolor.SetRColorValue(0);
+   packet->AddPacketTag(rcolor);
+   GColorTag gcolor;
+   gcolor.SetGColorValue(0);
+   packet->AddPacketTag(gcolor);
+   BColorTag bcolor;
+   bcolor.SetBColorValue(255);
+   packet->AddPacketTag(bcolor);
+
   m_totBytes += m_pktSize;
   if (InetSocketAddress::IsMatchingType (m_peer))
     {
