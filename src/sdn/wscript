@@ -68,6 +68,7 @@ def build(bld):
         'model/SdnController.cc',
         'model/Flow.cc',
         'model/Flow13.cc',
+        'model/SdnGroup13.cc',
         'model/SdnFlowTable.cc',
         'model/SdnFlowTable13.cc',
         'model/SdnPort.cc'
@@ -90,6 +91,7 @@ def build(bld):
         'model/SdnController.h',
         'model/Flow.h',
         'model/Flow13.h',
+        'model/SdnGroup13.h',
         'model/SdnFlowTable.h',
         'model/SdnFlowTable13.h',
         'model/SdnPort.h',

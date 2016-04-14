@@ -42,6 +42,7 @@
 #include <fluid/of13/openflow-13.h>
 //Sdn classes
 #include "Flow13.h"
+#include "SdnGroup13.h"
 #include "SdnCommon.h"
 
 namespace ns3 {
@@ -70,6 +71,7 @@ struct cmp_priority13
 class SdnFlowTable13 : public Object
 {
 public:
+  SdnFlowTable13() {}
   SdnFlowTable13(Ptr<SdnSwitch13> parentSwitch);
   /**
    * \brief Get the type ID.
@@ -99,7 +101,7 @@ public:
    * \brief Creates a tablestats object describing the flow table
    * \return A new table stats object
    */
-  fluid_msg::of13::TableStats* convertToTableStats();
+  fluid_msg::of13::TableStats* convertToTableStats(uint8_t whichTable = 0);
   /**
    * \brief Applies an action to a packet. Main entry point to other more specific action handlers
    * \param pkt The packet to modify
@@ -140,6 +142,23 @@ public:
   void deleteFlow(fluid_msg::of13::FlowMod* message);
   //void deleteFlowStrict(fluid_msg::of13::FlowMod* message);
   /**
+   * \brief Adds a new group into the table
+   * \param message The groupmod message that defines the new group to add
+   * \return The newly created group
+   */
+  Ptr<SdnGroup13> addGroup(fluid_msg::of13::GroupMod* message);
+  /**
+   * \brief Modifies a group in the table
+   * \param message The groupmod message that defines the modified group
+   * \return The modified group
+   */
+  Ptr<SdnGroup13> modifyGroup(fluid_msg::of13::GroupMod* message);
+    /**
+   * \brief Deletes a group in the table
+   * \param message The groupmod message that defines the group to delete
+   */
+  void deleteGroup(fluid_msg::of13::GroupMod* message);
+  /**
    * \brief Getter for all the flows in the table
    * \return m_table_flow_rules
    */
@@ -149,6 +168,7 @@ public:
   uint32_t m_active_count;  //!< A count of all active flow entries in the table 
   uint64_t m_lookup_count;  //!< A count of all lookups done in the table
   uint64_t m_matched_count; //!< A count of all total matches completed in the table
+  std::map<uint32_t, Ptr<SdnGroup13> > m_groupTable;
 private:
   Ptr<SdnSwitch13> m_parentSwitch;                   //!< The owning SdnSwitch of this table
   std::set<Flow13, cmp_priority13> m_flow_table_rules; //!< The actual set of all flows in the flow table. Sorted by priority
@@ -182,7 +202,7 @@ private:
    * \param pkt The packet being modified from the action
    * \param action The Group action being executed
    */
-  uint32_t handleGroupAction (Ptr<Packet> pkt,fluid_msg::of13::GroupAction* action);
+  std::vector<uint32_t> handleGroupAction (Ptr<Packet> pkt,fluid_msg::of13::GroupAction* action);
   /**
    * \brief Removes the TempHeaders from an actual packet so we can use them for analysis
    * \param pkt The packet containing the headers we're interested in

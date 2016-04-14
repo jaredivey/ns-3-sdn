@@ -1149,7 +1149,7 @@ AnimationInterface::OutputCsmaPacket (Ptr<const Packet> p, AnimPacketInfo &pktIn
   uint32_t nodeId = pktInfo.m_txnd->GetNode ()->GetId ();
   uint32_t rxId = pktrxInfo.m_rxnd->GetNode ()->GetId ();
 
-  WriteXmlP ("p", 
+  WriteXmlP (p, "p",
              nodeId, 
              pktInfo.m_fbTx, 
              pktInfo.m_lbTx, 

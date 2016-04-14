@@ -181,11 +181,17 @@ private:
    */
   virtual bool HandlePacket (Ptr<Packet> packet, uint32_t inPort);
   /**
-   * \brief Flood on every port except the one specified by portNum
+   * \brief Flood on every port except the one specified by portNum and those blocked or link down
    * \param packet The packet to flood
    * \param portNum The port we came in from, so avoid flooding on that one
    */
   virtual void Flood(Ptr<Packet> packet, uint32_t portNum);
+  /**
+   * \brief Output on every port except the one specified by portNum
+   * \param packet The packet to output
+   * \param portNum The port we came in from, so avoid flooding on that one
+   */
+  void OutputAll(Ptr<Packet> packet, uint32_t portNum);
   /**
    * \brief Flood on every netdevice except the one specified by portNum
    * \param packet The packet to flood
@@ -235,6 +241,11 @@ private:
    */
   virtual void OFHandle_Flow_Mod (uint8_t* buffer);
   /**
+   * \brief A message handler for dealing with group mod messages
+   * \param buffer a byte buffer of the original message. Converted to a fluid_msg GroupMod class
+   */
+  virtual void OFHandle_Group_Mod (uint8_t* buffer);
+  /**
    * \brief A message handler for dealing with port mod messages
    * \param buffer a byte buffer of the original message. Converted to a fluid_msg PortMod class
    */
@@ -274,6 +285,21 @@ private:
    * \param message the original flowmod message. Contains the delete instructions
    */
   void deleteFlowStrict(fluid_msg::of13::FlowMod* message);
+  /**
+   * \brief Add a group to the group table
+   * \param message the original groupmod message. Contains the new group to add
+   */
+  void addGroup(fluid_msg::of13::GroupMod* message);
+  /**
+   * \brief Modify all matching groups
+   * \param message the original groupmod message. Contains the modify instructions
+   */
+  void modifyGroup(fluid_msg::of13::GroupMod* message);
+  /**
+   * \brief Delete all matching groups
+   * \param message the original groupmod message. Contains the delete instructions
+   */
+  void deleteGroup(fluid_msg::of13::GroupMod* message);
   /**
     * \brief Get the Capabilities of this switch as a bitmask
     * \return A 32 bit number holding the switch capabilities as a bitmask

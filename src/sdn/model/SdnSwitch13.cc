@@ -184,6 +184,10 @@ void SdnSwitch13::HandleReadController (Ptr<Socket> socket)
         {
           OFHandle_Flow_Mod(buffer);
         }
+      if (message->type () == fluid_msg::of13::OFPT_GROUP_MOD)
+        {
+    	  OFHandle_Group_Mod(buffer);
+        }
 //      if (message->type () == fluid_msg::of10::OFPT_PORT_STATUS)
 //        {
 //          OFHandle_Port_Status(buffer);
@@ -240,14 +244,45 @@ bool SdnSwitch13::HandlePacket (Ptr<Packet>packet, uint32_t inPort)
   outPorts = m_flowTable13->handleActions (packet, resulting_action_set);
   for (std::vector<uint32_t>::iterator outPort = outPorts.begin(); outPort != outPorts.end(); ++outPort)
     {
-	  if(*outPort == fluid_msg::of13::OFPP_FLOOD)
-		{
-		  Flood(packet, inPort);
-		}
-	  if (*outPort == fluid_msg::of13::OFPP_TABLE)
-		{
-		  HandlePacket (packet, inPort);
-		}
+	  if (*outPort > fluid_msg::of13::OFPP_MAX)
+	    {
+		  if (*outPort == fluid_msg::of13::OFPP_IN_PORT)
+		    {
+			  Ptr<SdnPort> outputPort = m_portMap[inPort];
+			  outputPort->getConn()->sendOnNetDevice(packet);
+		    }
+		  else if (*outPort == fluid_msg::of13::OFPP_TABLE)
+			{
+			  HandlePacket (packet, inPort);
+			}
+		  else if (*outPort == fluid_msg::of13::OFPP_NORMAL)
+		    {
+			  // Normal L2/L3 switching?
+		    }
+		  else if(*outPort == fluid_msg::of13::OFPP_FLOOD)
+			{
+			  Flood(packet, inPort);
+			}
+		  else if(*outPort == fluid_msg::of13::OFPP_ALL)
+			{
+			  OutputAll(packet, inPort);
+			}
+		  else if (*outPort == fluid_msg::of13::OFPP_CONTROLLER)
+		    {
+			  // Send to controller with a reason
+			  uint8_t reason = (outPort + 1 == outPorts.end() ? fluid_msg::of13::OFPR_NO_MATCH : fluid_msg::of13::OFPR_ACTION);
+		      SendPacketInToController(packet, m_portMap[inPort]->getDevice (), reason);
+		    }
+		  else if (*outPort == fluid_msg::of13::OFPP_LOCAL)
+		    {
+			  // Local openflow port?
+		    }
+		  else if (*outPort == fluid_msg::of13::OFPP_ANY)
+			{
+			  // Should never be used outside flow mods and flow stats requests
+			}
+		  continue;
+	    }
 	  if (m_portMap.count(*outPort) != 0)
 		{
 		  Ptr<SdnPort> outputPort = m_portMap[*outPort]; //Might be wrong?
@@ -361,6 +396,28 @@ void SdnSwitch13::OFHandle_Flow_Mod(uint8_t* buffer)
     }
 }
 
+void SdnSwitch13::OFHandle_Group_Mod(uint8_t* buffer)
+{
+  NS_LOG_FUNCTION (this << buffer);
+  fluid_msg::of13::GroupMod* groupMod = new fluid_msg::of13::GroupMod();
+  groupMod->unpack(buffer);
+  if (groupMod)
+    {
+      switch (groupMod->command())
+        {
+          case fluid_msg::of13::OFPGC_ADD:
+            addGroup(groupMod);
+            break;
+          case fluid_msg::of13::OFPGC_MODIFY:
+            modifyGroup(groupMod);
+            break;
+          case fluid_msg::of13::OFPGC_DELETE:
+            deleteGroup(groupMod);
+            break;
+        }
+    }
+}
+
 void SdnSwitch13::addFlow(fluid_msg::of13::FlowMod* message)
 {
   NS_LOG_FUNCTION (this << message);
@@ -402,6 +459,33 @@ void SdnSwitch13::deleteFlowStrict(fluid_msg::of13::FlowMod* message)
   m_flowTable13->deleteFlow(message);
 }
 
+void SdnSwitch13::addGroup(fluid_msg::of13::GroupMod* message)
+{
+  NS_LOG_FUNCTION (this << message);
+  Ptr<SdnGroup13> group = m_flowTable13->addGroup(message);
+
+  if(group)
+    {
+
+      fluid_msg::of13::Error* errorMessage = new fluid_msg::of13::Error(SdnCommon::GenerateXId(),
+	      fluid_msg::of13::OFPET_GROUP_MOD_FAILED,fluid_msg::of13::OFPGMFC_GROUP_EXISTS);
+      m_controllerConn->send(errorMessage);
+      return;
+    }
+}
+
+void SdnSwitch13::modifyGroup(fluid_msg::of13::GroupMod* message)
+{
+  NS_LOG_FUNCTION (this << message);
+  m_flowTable13->modifyGroup(message);
+}
+
+void SdnSwitch13::deleteGroup(fluid_msg::of13::GroupMod* message)
+{
+  NS_LOG_FUNCTION (this << message);
+  m_flowTable13->deleteGroup(message);
+}
+
 void SdnSwitch13::OFHandle_Port_Mod (uint8_t* buffer)
 {
   NS_LOG_FUNCTION (this << buffer);
@@ -436,6 +520,7 @@ void SdnSwitch13::OFHandle_Packet_Out(uint8_t* buffer)
   NS_ASSERT (status != fluid_msg::OF_ERROR);
 
   Ptr<Packet> packet;
+  uint32_t inPort = packetOut->in_port();
   // Buffer ID == -1 => PacketOut should contain packet.
   if (packetOut->buffer_id () == (uint32_t)(-1))
     {
@@ -461,16 +546,45 @@ void SdnSwitch13::OFHandle_Packet_Out(uint8_t* buffer)
   outPorts = m_flowTable13->handleActions (packet, &action_list);
   for (std::vector<uint32_t>::iterator outPort = outPorts.begin(); outPort != outPorts.end(); ++outPort)
     {
-	  if(*outPort == fluid_msg::of13::OFPP_FLOOD)
-		{
-		  Flood(packet, packetOut->in_port());
-		  return;
-		}
-	  if (*outPort == fluid_msg::of13::OFPP_TABLE)
-		{
-		  HandlePacket (packet, packetOut->in_port());
-		  return;
-		}
+	  if (*outPort > fluid_msg::of13::OFPP_MAX)
+	    {
+		  if (*outPort == fluid_msg::of13::OFPP_IN_PORT)
+		    {
+			  Ptr<SdnPort> outputPort = m_portMap[inPort];
+			  outputPort->getConn()->sendOnNetDevice(packet);
+		    }
+		  else if (*outPort == fluid_msg::of13::OFPP_TABLE)
+			{
+			  HandlePacket (packet, inPort);
+			}
+		  else if (*outPort == fluid_msg::of13::OFPP_NORMAL)
+		    {
+			  // Normal L2/L3 switching?
+		    }
+		  else if(*outPort == fluid_msg::of13::OFPP_FLOOD)
+			{
+			  Flood(packet, inPort);
+			}
+		  else if(*outPort == fluid_msg::of13::OFPP_ALL)
+			{
+			  OutputAll(packet, inPort);
+			}
+		  else if (*outPort == fluid_msg::of13::OFPP_CONTROLLER)
+		    {
+			  // Send to controller with a reason
+			  uint8_t reason = (outPort + 1 == outPorts.end() ? fluid_msg::of13::OFPR_NO_MATCH : fluid_msg::of13::OFPR_ACTION);
+		      SendPacketInToController(packet, m_portMap[inPort]->getDevice (), reason);
+		    }
+		  else if (*outPort == fluid_msg::of13::OFPP_LOCAL)
+		    {
+			  // Local openflow port?
+		    }
+		  else if (*outPort == fluid_msg::of13::OFPP_ANY)
+			{
+			  // Should never be used outside flow mods and flow stats requests
+			}
+		  continue;
+	    }
 	  if (m_portMap.count(*outPort) != 0)
 		{
 		  Ptr<SdnPort> outputPort = m_portMap[*outPort]; //Might be wrong?
@@ -560,6 +674,19 @@ void SdnSwitch13::Flood(Ptr<Packet> packet, Ptr<NetDevice> netDevice)
           port->second->getConn()->sendOnNetDevice(packet);
         }
     }
+}
+
+void SdnSwitch13::OutputAll(Ptr<Packet> packet, uint32_t portNum)
+{
+  NS_LOG_FUNCTION (this << packet << portNum);
+ for(std::map<uint32_t,Ptr<SdnPort> >::iterator port = m_portMap.begin(); port != m_portMap.end(); ++port)
+  {
+    if((port->first != portNum) && (port->second))
+      {
+        Ptr<Packet> copyPacket = packet->Copy ();
+        port->second->getConn()->sendOnNetDevice(copyPacket);
+      }
+  }
 }
 
 uint32_t SdnSwitch13::GetCapabilities ()

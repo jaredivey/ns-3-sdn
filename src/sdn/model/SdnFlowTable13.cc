@@ -32,7 +32,7 @@ TypeId SdnFlowTable13::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::SdnFlowTable13")
     .SetParent<Object> ()
-    .AddConstructor<SdnSwitch> ()
+    .AddConstructor<SdnFlowTable13> ()
   ;
   return tid;
 }
@@ -144,64 +144,68 @@ SdnFlowTable13::getPacketFields (uint32_t inPort)
 {
  	 fluid_msg::of13::Match match;
  
- 	  fluid_msg::of13::InPort *InPort_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IN_PORT);
+ 	  fluid_msg::of13::InPort *InPort_oxmtlv = dynamic_cast<fluid_msg::of13::InPort *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IN_PORT));
  	  InPort_oxmtlv->value(inPort);
  	  match.add_oxm_field(InPort_oxmtlv);
+
+	  fluid_msg::of13::InPhyPort *InPhyPort_oxmtlv = dynamic_cast<fluid_msg::of13::InPhyPort *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IN_PHY_PORT));
+	  InPhyPort_oxmtlv->value(inPort);
+	  match.add_oxm_field(InPhyPort_oxmtlv);
  
  	  if (!m_tcpHeader.isEmpty) //TCP case
  	    {
- 	      fluid_msg::of13::TCPDst *Dst_oxmtlv = match.make_oxm_tlv (fluid_msg::of13::OFPXMT_OFB_TCP_DST);
+ 	      fluid_msg::of13::TCPDst *Dst_oxmtlv = dynamic_cast<fluid_msg::of13::TCPDst *>(fluid_msg::of13::Match::make_oxm_tlv (fluid_msg::of13::OFPXMT_OFB_TCP_DST));
  	      Dst_oxmtlv -> value(m_tcpHeader.header.GetDestinationPort());
  	      match.add_oxm_field(Dst_oxmtlv);
  
- 	      fluid_msg::of13::TCPSrc *Src_oxmtlv = match.make_oxm_tlv (fluid_msg::of13::OFPXMT_OFB_TCP_SRC);
+ 	      fluid_msg::of13::TCPSrc *Src_oxmtlv = dynamic_cast<fluid_msg::of13::TCPSrc *>(fluid_msg::of13::Match::make_oxm_tlv (fluid_msg::of13::OFPXMT_OFB_TCP_SRC));
  	      Src_oxmtlv -> value(m_tcpHeader.header.GetSourcePort());
  	      match.add_oxm_field(Src_oxmtlv);
  	    }
  	  if (!m_udpHeader.isEmpty) //UDP case
  	    {
- 	      fluid_msg::of13::UDPDst *Dst_oxmtlv = match.make_oxm_tlv (fluid_msg::of13::OFPXMT_OFB_UDP_DST);
+ 	      fluid_msg::of13::UDPDst *Dst_oxmtlv = dynamic_cast<fluid_msg::of13::UDPDst *>(fluid_msg::of13::Match::make_oxm_tlv (fluid_msg::of13::OFPXMT_OFB_UDP_DST));
  	      Dst_oxmtlv -> value(m_udpHeader.header.GetDestinationPort());
  	      match.add_oxm_field(Dst_oxmtlv);
  
- 	      fluid_msg::of13::UDPSrc *Src_oxmtlv = match.make_oxm_tlv (fluid_msg::of13::OFPXMT_OFB_UDP_SRC);
+ 	      fluid_msg::of13::UDPSrc *Src_oxmtlv = dynamic_cast<fluid_msg::of13::UDPSrc *>(fluid_msg::of13::Match::make_oxm_tlv (fluid_msg::of13::OFPXMT_OFB_UDP_SRC));
  	      Src_oxmtlv -> value(m_udpHeader.header.GetSourcePort());
  	      match.add_oxm_field(Src_oxmtlv);
  	    }
  
  	  if (!m_ipv4Header.isEmpty) //IPv4 case
  	    {
- 		  fluid_msg::of13::IPDSCP *Dscp_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IP_DSCP);
+ 		  fluid_msg::of13::IPDSCP *Dscp_oxmtlv = dynamic_cast<fluid_msg::of13::IPDSCP *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IP_DSCP));
  		  Dscp_oxmtlv->value(m_ipv4Header.header.GetDscp());
  		  match.add_oxm_field(Dscp_oxmtlv);
  
- 		  fluid_msg::of13::IPECN *Ecn_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IP_ECN);
+ 		  fluid_msg::of13::IPECN *Ecn_oxmtlv = dynamic_cast<fluid_msg::of13::IPECN *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IP_ECN));
  		  Ecn_oxmtlv->value(m_ipv4Header.header.GetEcn());
  		  match.add_oxm_field(Ecn_oxmtlv);
  
  	      if (!match.ip_proto ())
  	        {
- 	    	  fluid_msg::of13::IPProto *IPpro_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IP_PROTO);
+ 	    	  fluid_msg::of13::IPProto *IPpro_oxmtlv = dynamic_cast<fluid_msg::of13::IPProto *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IP_PROTO));
  	    	  Ecn_oxmtlv->value(m_ipv4Header.header.GetProtocol());
  	    	  match.add_oxm_field(IPpro_oxmtlv);
  	        }
  
- 		  fluid_msg::of13::IPv4Src *Src_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV4_SRC);
+ 		  fluid_msg::of13::IPv4Src *Src_oxmtlv = dynamic_cast<fluid_msg::of13::IPv4Src *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV4_SRC));
  		  Src_oxmtlv->value(m_ipv4Header.header.GetSource().Get());
  		  match.add_oxm_field(Src_oxmtlv);
  
- 		  fluid_msg::of13::IPv4Src *Dst_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV4_DST);
- 		  Dst_oxmtlv->value(m_ipv4Header.header.GetDestination().Get());
+ 		  fluid_msg::of13::IPv4Dst *Dst_oxmtlv = dynamic_cast<fluid_msg::of13::IPv4Dst *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV4_DST));
+ 		  Dst_oxmtlv->value(fluid_msg::IPAddress(m_ipv4Header.header.GetDestination().Get()));
  		  match.add_oxm_field(Dst_oxmtlv);
  
  
  	      if ((m_ipv4Header.header.GetProtocol () == 1) && (!m_icmpv4Header.isEmpty))
  		    {
- 	    	  fluid_msg::of13::ICMPv4Type *Type_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ICMPV4_TYPE);
+ 	    	  fluid_msg::of13::ICMPv4Type *Type_oxmtlv = dynamic_cast<fluid_msg::of13::ICMPv4Type *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ICMPV4_TYPE));
  	    	  Type_oxmtlv->value(m_icmpv4Header.header.GetType ());
  	    	  match.add_oxm_field(Type_oxmtlv);
  
- 	    	  fluid_msg::of13::ICMPv4Code *Code_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ICMPV4_CODE);
+ 	    	  fluid_msg::of13::ICMPv4Code *Code_oxmtlv = dynamic_cast<fluid_msg::of13::ICMPv4Code *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ICMPV4_CODE));
  	    	  Type_oxmtlv->value(m_icmpv4Header.header.GetCode ());
  	    	  match.add_oxm_field(Code_oxmtlv);
  		    }
@@ -210,50 +214,47 @@ SdnFlowTable13::getPacketFields (uint32_t inPort)
  	    {
  	      uint8_t sourceBuffer[16];
  	      m_ipv6Header.header.GetSourceAddress ().GetBytes (sourceBuffer);
- 		  fluid_msg::of13::IPv6Src *Src_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV6_SRC);
- 		  Src_oxmtlv->value(sourceBuffer);
+ 		  fluid_msg::of13::IPv6Src *Src_oxmtlv = dynamic_cast<fluid_msg::of13::IPv6Src *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV6_SRC));
+ 		  Src_oxmtlv->value(fluid_msg::IPAddress(sourceBuffer));
  		  match.add_oxm_field(Src_oxmtlv);
  
  	      uint8_t destinationBuffer[16];
  	      m_ipv6Header.header.GetDestinationAddress ().GetBytes (destinationBuffer);
- 		  fluid_msg::of13::IPv6Dst *Dst_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV6_DST);
- 		  Dst_oxmtlv->value(destinationBuffer);
+ 		  fluid_msg::of13::IPv6Dst *Dst_oxmtlv = dynamic_cast<fluid_msg::of13::IPv6Dst *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV6_DST));
+ 		  Dst_oxmtlv->value(fluid_msg::IPAddress(destinationBuffer));
  		  match.add_oxm_field(Dst_oxmtlv);
  
- 		  fluid_msg::of13::IPV6Flabel *Flabel_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV6_FLABEL);
+ 		  fluid_msg::of13::IPV6Flabel *Flabel_oxmtlv = dynamic_cast<fluid_msg::of13::IPV6Flabel *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_IPV6_FLABEL));
  		  Flabel_oxmtlv->value(m_ipv6Header.header.GetFlowLabel());
  		  match.add_oxm_field(Flabel_oxmtlv);
- 
- 
  	    }
  	  if (!m_arpHeader.isEmpty) //Arp case
  	    {
  
- 		  fluid_msg::of13::ARPOp *Op_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_OP);
+ 		  fluid_msg::of13::ARPOp *Op_oxmtlv = dynamic_cast<fluid_msg::of13::ARPOp *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_OP));
  		  Op_oxmtlv->value((uint16_t)m_arpHeader.header.IsRequest () ? ArpHeader::ARP_TYPE_REQUEST: ArpHeader::ARP_TYPE_REPLY);
  		  match.add_oxm_field(Op_oxmtlv); //????
  
- 
  	      //match.nw_proto ((uint8_t)(m_arpHeader.header.IsRequest () ? ArpHeader::ARP_TYPE_REQUEST : ArpHeader::ARP_TYPE_REPLY));
  
- 		  fluid_msg::of13::ARPSPA *SPA_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_SPA);
- 		  SPA_oxmtlv->value(m_arpHeader.header.GetSourceIpv4Address().Get());
+ 		  fluid_msg::of13::ARPSPA *SPA_oxmtlv = dynamic_cast<fluid_msg::of13::ARPSPA *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_SPA));
+ 		  SPA_oxmtlv->value(fluid_msg::IPAddress(m_arpHeader.header.GetSourceIpv4Address().Get()));
  		  match.add_oxm_field(SPA_oxmtlv);
  
- 		  fluid_msg::of13::ARPTPA *TPA_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_TPA);
- 		  TPA_oxmtlv->value(m_arpHeader.header.GetDestinationIpv4Address().Get());
+ 		  fluid_msg::of13::ARPTPA *TPA_oxmtlv = dynamic_cast<fluid_msg::of13::ARPTPA *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_TPA));
+ 		  TPA_oxmtlv->value(fluid_msg::IPAddress(m_arpHeader.header.GetDestinationIpv4Address().Get()));
  		  match.add_oxm_field(TPA_oxmtlv);
  
  		  uint8_t srcAddr[6];
  		  m_arpHeader.header.GetSourceHardwareAddress().CopyTo(srcAddr);
- 		  fluid_msg::of13::ARPSHA *SHA_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_SHA);
- 		  SHA_oxmtlv->value(srcAddr);
+ 		  fluid_msg::of13::ARPSHA *SHA_oxmtlv = dynamic_cast<fluid_msg::of13::ARPSHA *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_SHA));
+ 		  SHA_oxmtlv->value(fluid_msg::EthAddress(srcAddr));
  		  match.add_oxm_field(SHA_oxmtlv);
  
  		  uint8_t dstAddr[6];
  		  m_arpHeader.header.GetDestinationHardwareAddress().CopyTo(dstAddr);
- 		  fluid_msg::of13::ARPTHA *THA_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_THA);
- 		  THA_oxmtlv->value(dstAddr);
+ 		  fluid_msg::of13::ARPTHA *THA_oxmtlv = dynamic_cast<fluid_msg::of13::ARPTHA *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ARP_THA));
+ 		  THA_oxmtlv->value(fluid_msg::EthAddress(dstAddr));
  		  match.add_oxm_field(THA_oxmtlv);
  
  	    }
@@ -264,25 +265,22 @@ SdnFlowTable13::getPacketFields (uint32_t inPort)
  	      uint8_t dstAddr[6];
  	      m_ethHeader.header.GetDestination ().CopyTo (dstAddr);
  
- 		  fluid_msg::of13::EthSrc *Src_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ETH_SRC);
- 		  Src_oxmtlv->value(srcAddr);
+ 		  fluid_msg::of13::EthSrc *Src_oxmtlv = dynamic_cast<fluid_msg::of13::EthSrc *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ETH_SRC));
+ 		  Src_oxmtlv->value(fluid_msg::EthAddress(srcAddr));
  		  match.add_oxm_field(Src_oxmtlv);
  
- 		  fluid_msg::of13::EthDst *Dst_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ETH_DST);
- 		  Dst_oxmtlv->value(dstAddr);
+ 		  fluid_msg::of13::EthDst *Dst_oxmtlv = dynamic_cast<fluid_msg::of13::EthDst *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ETH_DST));
+ 		  Dst_oxmtlv->value(fluid_msg::EthAddress(dstAddr));
  		  match.add_oxm_field(Dst_oxmtlv);
  
- 		  fluid_msg::of13::EthType *Type_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ETH_TYPE);
+ 		  fluid_msg::of13::EthType *Type_oxmtlv = dynamic_cast<fluid_msg::of13::EthType *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_ETH_TYPE));
  		  Type_oxmtlv->value(m_ethHeader.header.GetLengthType ());
  		  match.add_oxm_field(Type_oxmtlv);
  
- 
  	      //No VLAN header accessor yet
- 		  fluid_msg::of13::VLANVid *Vid_oxmtlv = match.make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_VLAN_VID);
+ 		  fluid_msg::of13::VLANVid *Vid_oxmtlv = dynamic_cast<fluid_msg::of13::VLANVid *>(fluid_msg::of13::Match::make_oxm_tlv(fluid_msg::of13::OFPXMT_OFB_VLAN_VID));
  		  Vid_oxmtlv->value(0);
  		  match.add_oxm_field(Vid_oxmtlv);
- 
- 
  	    }
  	  return match;
 }
@@ -323,7 +321,11 @@ SdnFlowTable13::handleActions (Ptr<Packet> pkt,fluid_msg::ActionSet* action_set)
 			case fluid_msg::of13::OFPAT_GROUP:
 			{
 				fluid_msg::of13::GroupAction* groupAction = dynamic_cast<fluid_msg::of13::GroupAction*>(action);
-				outPorts.push_back(handleGroupAction (pkt,groupAction));
+				std::vector<uint32_t> extraPorts = handleGroupAction (pkt,groupAction);
+				for (std::vector<uint32_t>::iterator extraPort = extraPorts.begin(); extraPort != extraPorts.end(); ++extraPort)
+			      {
+				    outPorts.push_back(*extraPort);
+			      }
 				break;
 			}
 			default:
@@ -352,7 +354,11 @@ SdnFlowTable13::handleActions (Ptr<Packet> pkt,fluid_msg::ActionList* action_lis
 			case fluid_msg::of13::OFPAT_GROUP:
 			{
 				fluid_msg::of13::GroupAction* groupAction = dynamic_cast<fluid_msg::of13::GroupAction*>(action);
-				outPorts.push_back(handleGroupAction (pkt,groupAction));
+				std::vector<uint32_t> extraPorts = handleGroupAction (pkt,groupAction);
+				for (std::vector<uint32_t>::iterator extraPort = extraPorts.begin(); extraPort != extraPorts.end(); ++extraPort)
+			      {
+				    outPorts.push_back(*extraPort);
+			      }
 				break;
 			}
 			default:
@@ -372,11 +378,25 @@ SdnFlowTable13::handleOutputAction (Ptr<Packet> pkt,fluid_msg::of13::OutputActio
   return action->port ();
 }
 
-uint32_t
+std::vector<uint32_t>
 SdnFlowTable13::handleGroupAction (Ptr<Packet> pkt,fluid_msg::of13::GroupAction* action)
 {
-  // Figure out which group table to gather action buckets from. action->group_id ();
-  return 0;
+  std::vector<uint32_t> outPorts;
+  // Figure out which group table to gather action buckets from.
+  if (m_groupTable.count(action->group_id()))
+    {
+	  for (std::vector<fluid_msg::of13::Bucket>::iterator i = m_groupTable[action->group_id()]->m_groupDesc.buckets().begin ();
+			  i != m_groupTable[action->group_id()]->m_groupDesc.buckets().end(); i++)
+	    {
+		  fluid_msg::ActionSet action_set = i->get_actions();
+		  std::vector<uint32_t> extraPorts = handleActions (pkt, &action_set);
+		  for (std::vector<uint32_t>::iterator extraPort = extraPorts.begin(); extraPort != extraPorts.end(); ++extraPort)
+			{
+			  outPorts.push_back(*extraPort);
+			}
+	    }
+    }
+  return outPorts;
 }
 
 //Utility methods to deconstruct/reconstruct headers
@@ -510,11 +530,17 @@ SdnFlowTable13::RestructHeader (Ptr<Packet> pkt)
 }
 
 fluid_msg::of13::TableStats*
-SdnFlowTable13::convertToTableStats ()
+SdnFlowTable13::convertToTableStats (uint8_t whichTable)
 {
-  std::stringstream ss;
-  ss << m_tableid;
-  return new fluid_msg::of13::TableStats (m_tableid,m_active_count,m_lookup_count,m_matched_count);
+	uint32_t datapathId = m_parentSwitch->getDatapathID();
+	if (g_flowTables.count(datapathId))
+	  {
+		  return new fluid_msg::of13::TableStats (whichTable,
+				  g_flowTables[datapathId].at(whichTable)->m_active_count,
+				  g_flowTables[datapathId].at(whichTable)->m_lookup_count,
+				  g_flowTables[datapathId].at(whichTable)->m_matched_count);
+	  }
+	return NULL;
 }
 
 //Checks if this flow will conflict with a current flow of the same priority
@@ -619,6 +645,52 @@ SdnFlowTable13::deleteFlow (fluid_msg::of13::FlowMod* message)
         }
     }
   m_active_count--;
+}
+
+Ptr<SdnGroup13>
+SdnFlowTable13::addGroup (fluid_msg::of13::GroupMod* message)
+{
+  NS_LOG_DEBUG ("Adding new group on switch at time" << Simulator::Now ().GetSeconds ());
+  Ptr<SdnGroup13> newGroup = CreateObject<SdnGroup13> (message);
+
+  // If matching group already exists, cannot add.
+  if (m_groupTable.count(message->group_id()))
+	{
+	  return newGroup;
+	}
+
+  m_groupTable[message->group_id()] = newGroup;
+  return m_groupTable[message->group_id()];
+}
+
+Ptr<SdnGroup13>
+SdnFlowTable13::modifyGroup (fluid_msg::of13::GroupMod* message)
+{
+  NS_LOG_DEBUG ("Modifying group on switch at time" << Simulator::Now ().GetSeconds ());
+  Ptr<SdnGroup13> newGroup = CreateObject<SdnGroup13> (message);
+
+  // If no matching group already exists, cannot modify.
+  if (m_groupTable.count(newGroup->m_groupDesc.group_id()) == 0)
+	{
+	  return newGroup;
+	}
+
+  m_groupTable[newGroup->m_groupDesc.group_id()] = newGroup;
+  return m_groupTable[newGroup->m_groupDesc.group_id()];
+}
+
+void
+SdnFlowTable13::deleteGroup (fluid_msg::of13::GroupMod* message)
+{
+  NS_LOG_DEBUG ("Deleting group on switch at time" << Simulator::Now ().GetSeconds ());
+  if (message->group_id() == fluid_msg::of13::OFPG_ALL)
+    {
+	  m_groupTable.clear();
+    }
+  else if (m_groupTable.count(message->group_id()))
+    {
+	  m_groupTable.erase(message->group_id());
+    }
 }
 
 void
