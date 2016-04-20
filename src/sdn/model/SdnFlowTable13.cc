@@ -115,7 +115,16 @@ SdnFlowTable13::handlePacket (Ptr<Packet> pkt, fluid_msg::ActionSet *action_set,
         	  }
         	  else if (instruction->type () == fluid_msg::of13::OFPIT_APPLY_ACTIONS)
         	  {
+        		  RestructHeader(pkt);
+        		  fluid_msg::of13::ApplyActions* applyAction = dynamic_cast<fluid_msg::of13::ApplyActions*> (instruction);
+        		  fluid_msg::ActionList actions(applyAction->actions());
+                  std::vector<uint32_t> outPorts = handleActions(pkt, &actions);
 
+                  if (!outPorts.empty())
+                  {
+                	  m_parentSwitch->HandlePorts (pkt, outPorts, inPort);
+                  }
+                  DestructHeader(pkt);
         	  }
         	  else if (instruction->type () == fluid_msg::of13::OFPIT_CLEAR_ACTIONS)
         	  {
@@ -306,10 +315,13 @@ std::vector<uint32_t>
 SdnFlowTable13::handleActions (Ptr<Packet> pkt,fluid_msg::ActionSet* action_set)
 {
   std::vector<uint32_t> outPorts;
+  uint32_t length = 0;
   for (std::set<fluid_msg::Action*, fluid_msg::comp_action_set_order>::iterator i = action_set->action_set ().begin ();
-		  i != action_set->action_set ().end (); i++)
+		  (i != action_set->action_set ().end ()) && (length < action_set->length());
+		  i++)
     {
 	  fluid_msg::Action *action = *i;
+	  length += action->length();
 	  switch ((uint32_t)action->type ())
 		{
 			case fluid_msg::of13::OFPAT_OUTPUT:
@@ -339,10 +351,13 @@ std::vector<uint32_t>
 SdnFlowTable13::handleActions (Ptr<Packet> pkt,fluid_msg::ActionList* action_list)
 {
   std::vector<uint32_t> outPorts;
+  uint32_t length = 0;
   for (std::list<fluid_msg::Action*>::iterator i = action_list->action_list ().begin ();
-		  i != action_list->action_list ().end (); i++)
+		  (i != action_list->action_list ().end ()) && (length < action_list->length());
+		  i++)
     {
 	  fluid_msg::Action *action = *i;
+	  length += action->length();
 	  switch ((uint32_t)action->type ())
 		{
 			case fluid_msg::of13::OFPAT_OUTPUT:
@@ -628,7 +643,7 @@ void
 SdnFlowTable13::deleteFlow (fluid_msg::of13::FlowMod* message)
 {
   NS_LOG_DEBUG ("Deleting flow on switch at time" << Simulator::Now ().GetSeconds ());
-  for (std::set<Flow13, cmp_priority>::iterator i = m_flow_table_rules.begin (); i != m_flow_table_rules.end (); i++)
+  for (std::set<Flow13, cmp_priority13>::iterator i = m_flow_table_rules.begin (); i != m_flow_table_rules.end (); i++)
     {
       Flow13 flow = *i;
       if (flow.priority_ == message->priority () && Flow13::pkt_match (flow,message->match ()))

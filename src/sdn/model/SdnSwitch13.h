@@ -21,7 +21,6 @@
 
 //Sdn Common library
 #include "SdnCommon.h"
-#include "SdnSwitch.h"
 #include "SdnFlowTable13.h"
 #include "SdnConnection.h"
 #include "SdnPort.h"
@@ -49,6 +48,10 @@
 #include <iostream>
 #include <sstream>
 
+//Special Openflow Global Constants
+#define OF_DATAPATH_ID_PADDING 0x00
+#define OFCONTROLLERPORT 6633
+
 namespace ns3 {
 
 class SdnSwitch13;
@@ -68,7 +71,7 @@ class SdnSwitch13;
 
 class SdnCommon;
 
-class SdnSwitch13 : public SdnSwitch
+class SdnSwitch13 : public Application
 {
 public:
     /// \brief A structure to hold the Capabilities of the switch, set as a simple bytemask. See the openflow 1.0.0 specifications. In the NS3 world we can defaultly handle only stat capabilities
@@ -150,22 +153,35 @@ public:
   void SendFlowRemovedMessageToController(Flow13 flow, uint8_t reason);
   SdnSwitch13 ();
   ~SdnSwitch13 ();
+  static uint32_t TOTAL_SERIAL_NUMBERS; //!< Global counter for all unique switch IDs
+  static uint32_t TOTAL_DATAPATH_IDS; //!< Global counter for all Datapath IDs
   Ptr<SdnFlowTable13> m_flowTable13; //!< The containing flow table for this switch
+  virtual uint32_t getDatapathID () { return m_datapathID; }
+  virtual void HandlePorts (Ptr<Packet> packet, std::vector<uint32_t> outPorts, uint32_t inPort);
 
   /**
     * \return The 32 DPID number of the switch
     */
-  uint32_t getDatapathID () { return m_datapathID; }
 protected:
   virtual void DoDispose (void);
-private:
+//private:
   typedef std::map<uint32_t, Ptr<SdnPort> > PortMap; //<!A mapping of virtual port numbers to SdnPort
+  virtual void StartApplication (void);  // Called at time specified by Start
+  virtual void StopApplication (void);   // Called at time specified by Stop
   /**
    * \brief Establishes a 
    * \param device Netdevice to connect a socket toward
    * \param switchAddress A generic address object for the socket to bind on. Expects an ipv4 Address
    */
   virtual void EstablishControllerConnection (Ptr<NetDevice> device,
+		  Ipv4Address localAddress,
+		  Ipv4Address remoteAddress);
+  /**
+   * \brief Establishes a
+   * \param device Netdevice to connect a socket toward
+   * \param switchAddress A generic address object for the socket to bind on. Expects an ipv4 Address
+   */
+  virtual void EstablishConnection (Ptr<NetDevice> device,
 		  Ipv4Address localAddress,
 		  Ipv4Address remoteAddress);
   /**
@@ -310,7 +326,14 @@ private:
     * \param message A message containing a certain version of openflow
     * \return True if the versions are compatible. See the openflow spec 1.0.0 and spec 1.3.0 for version compatibility
     */
+  /**
+   * \brief Utility function to grab the mac address from a socket
+   * \return A 64 bit number holding the macaddress
+   */
+ virtual uint64_t GetMacAddress ();
   virtual bool NegotiateVersion (fluid_msg::OFMsg* message);
+  static uint32_t getNewDatapathID ();
+  virtual uint16_t getNewPortNumber ();
 
   //Descriptions
   uint32_t m_datapathID; //!< Unique Datapath ID number
@@ -332,6 +355,8 @@ private:
   bool m_kernel; //!< Use the Linux kernel stack (DCE-only)
 
   virtual void ConnectionSucceeded (Ptr<Socket> socket);
+  virtual void ConnectionFailed (Ptr<Socket> socket);
+
 };
 
 } //End namespace ns3

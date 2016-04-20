@@ -50,10 +50,13 @@ NS_LOG_COMPONENT_DEFINE ("SdnSwitch13");
 
 NS_OBJECT_ENSURE_REGISTERED (SdnSwitch13);
 
+uint32_t SdnSwitch13::TOTAL_SERIAL_NUMBERS = 0;
+uint32_t SdnSwitch13::TOTAL_DATAPATH_IDS = 0;
+
 TypeId SdnSwitch13::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::SdnSwitch13")
-    .SetParent<SdnSwitch> ()
+    .SetParent<Application> ()
     .AddConstructor<SdnSwitch13> ()
   ;
   return tid;
@@ -123,6 +126,139 @@ void SdnSwitch13::EstablishControllerConnection (Ptr<NetDevice> device,
   m_controllerConn = CreateObject<SdnConnection> (device, socket);
 }
 
+void SdnSwitch13::EstablishConnection (Ptr<NetDevice> device,
+				    Ipv4Address localAddress,
+				    Ipv4Address remoteAddress)
+{
+  NS_LOG_FUNCTION (this << device << localAddress << remoteAddress);
+  NS_LOG_INFO (Simulator::Now().GetSeconds());
+
+  //Create a socket to a switch
+  uint16_t switchPort = SdnSwitch13::getNewPortNumber ();
+
+  TypeId tid = TypeId::LookupByName ("ns3::Ipv4RawSocketFactory");
+  if (m_kernel)
+    {
+	  tid = TypeId::LookupByName ("ns3::LinuxIpv4RawSocketFactory");
+    }
+  Ptr<Socket> socket = Socket::CreateSocket (GetNode (), tid);
+  socket->SetAttribute ("Protocol", UintegerValue (17));
+
+  Address a;
+  NS_ASSERT_MSG (Ipv4Address::IsMatchingType (Ipv4Address::ConvertFrom (remoteAddress)),
+				 "Found non IPv4 matching NetDevice address " <<
+				 Ipv4Address::ConvertFrom (remoteAddress) << "in a switch application ");
+
+  a = InetSocketAddress (Ipv4Address::ConvertFrom (remoteAddress), switchPort);
+  socket->Bind ();
+  socket->BindToNetDevice (device);
+  socket->Connect (a);
+
+  Ptr<Layer2P2PNetDevice> l2Device = DynamicCast<Layer2P2PNetDevice>(device);
+  if(l2Device)
+    {
+      l2Device->SetSdnEnable(true);
+      l2Device->SetSdnReceiveCallback(MakeCallback(&SdnSwitch13::HandleReadFromNetDevice, this));
+      Ptr<SdnConnection> c = CreateObject<SdnConnection> (device, socket);
+      Ptr<Layer2P2PChannel> channel = DynamicCast<Layer2P2PChannel>(device->GetChannel());
+      uint32_t portFeaturesMask = 0;
+      if(channel)
+	{
+	  DataRateValue deviceDataRate;
+	  l2Device->GetAttribute ("DataRate", deviceDataRate);
+	  uint64_t bitRate = deviceDataRate.Get ().GetBitRate ();
+	  if(bitRate >= 10 * GB)
+	    {
+	      portFeaturesMask |= fluid_msg::of13::OFPPF_10GB_FD;
+	    }
+	  else if(bitRate >= GB)
+	    {
+	      portFeaturesMask |= fluid_msg::of13::OFPPF_1GB_FD;
+	    }
+	  else if(bitRate >= MB * 100)
+	    {
+	      portFeaturesMask |= fluid_msg::of13::OFPPF_100MB_FD;
+	    }
+	  else if(bitRate >= MB * 10)
+	    {
+	      portFeaturesMask |= fluid_msg::of13::OFPPF_10MB_FD;
+	    }
+	}
+      Ptr<SdnPort> p = CreateObject<SdnPort> (device, c, switchPort, 0, 0, portFeaturesMask);
+      m_portMap.insert (std::make_pair (p->getPortNumber(),p));
+    }
+}
+
+void SdnSwitch13::StartApplication (void)
+{
+  NS_LOG_FUNCTION (this);
+
+  uint32_t t_numDevices = GetNode ()->GetNDevices ();
+  for (uint32_t i = 0; i < t_numDevices; ++i)
+    {
+      //Get the Device and the channel on this device
+      Ptr<NetDevice> device = GetNode ()->GetDevice (i);
+      Ptr<Channel> channel = device->GetChannel ();
+
+      //Try and find the remoteNode on the other side of the channel
+      Ptr<Node> remoteNode;
+      Ptr<NetDevice> remoteDevice;
+      if (!DynamicCast<LoopbackNetDevice> (device))
+        {
+          if (channel->GetDevice (0) == device)
+            {
+              remoteDevice = channel->GetDevice (1);
+            }
+          else
+            {
+              remoteDevice = channel->GetDevice (0);
+            }
+          remoteNode = remoteDevice->GetNode ();
+          Ptr<Ipv4> remoteIpv4 = remoteNode->GetObject<Ipv4> ();
+          Ptr<Ipv4> localIpv4 = GetNode ()->GetObject<Ipv4> ();
+          NS_ASSERT_MSG (remoteIpv4 && localIpv4, "SdnSwitch::StartApplication(): NetDevice is associated"
+                         " with a node without IPv4 stack installed -> fail "
+                         "(maybe need to use InternetStackHelper?)");
+          Ipv4InterfaceAddress t_remoteInterfaceAddress =
+            remoteIpv4->GetAddress (remoteIpv4->GetInterfaceForDevice (remoteDevice), 0);
+          Ipv4Address t_remoteAddress = t_remoteInterfaceAddress.GetLocal ();
+
+          Ipv4InterfaceAddress t_localInterfaceAddress =
+            localIpv4->GetAddress (localIpv4->GetInterfaceForDevice (device), 0);
+          Ipv4Address t_localAddress = t_localInterfaceAddress.GetLocal ();
+
+          // The following logic is a mix of hack and design. To simplify connectivity between
+          // a controller and a switch, the channel used between them should be point-to-point.
+          // Anything else that may connect to a switch can likely be considered either an end
+          // host or another switch.
+          //
+          // Previous logic aimed at examining each application installed on an adjacent node
+          // to see if one of the applications was either an SndController or an SdnSwitch.
+          // This logic was incompatible with distributed simulations (due to ghost nodes)
+          // and DCE (due to the fact that controller's running in DCE would definitely not
+          // be SdnController ns-3 applications).
+          Ptr<PointToPointNetDevice> p2pDevice = DynamicCast<PointToPointNetDevice> (device);
+          if (p2pDevice)
+            {
+              NS_LOG_INFO ("Switch establishing controller connection with " <<
+                           t_remoteAddress);
+              EstablishControllerConnection (device, t_localAddress, t_remoteAddress);
+            }
+          else
+            {
+              NS_LOG_INFO ("Switch establishing non-controller connection with " <<
+                           t_remoteAddress);
+              EstablishConnection (device, t_localAddress, t_remoteAddress);
+            }
+        }
+    }
+}
+
+void SdnSwitch13::StopApplication (void)
+{
+  NS_LOG_FUNCTION (this);
+}
+
 void
 SdnSwitch13::ConnectionSucceeded (Ptr<Socket> socket)
 {
@@ -134,6 +270,12 @@ SdnSwitch13::ConnectionSucceeded (Ptr<Socket> socket)
     socket->SetRecvCallback (MakeCallback (&SdnSwitch13::HandleReadController,this));
 
     NS_LOG_INFO (Simulator::Now().GetSeconds() << " Connection succeeded");
+}
+void
+SdnSwitch13::ConnectionFailed (Ptr<Socket> socket)
+{
+    NS_LOG_FUNCTION (this << socket);
+    NS_LOG_INFO (Simulator::Now().GetSeconds() << " Connection failed");
 }
 
 //Handles a packet from a controller
@@ -242,55 +384,64 @@ bool SdnSwitch13::HandlePacket (Ptr<Packet>packet, uint32_t inPort)
 
   // Process action set instead of sending out port vector (need to send reason along with messages to controller
   outPorts = m_flowTable13->handleActions (packet, resulting_action_set);
-  for (std::vector<uint32_t>::iterator outPort = outPorts.begin(); outPort != outPorts.end(); ++outPort)
-    {
-	  if (*outPort > fluid_msg::of13::OFPP_MAX)
-	    {
-		  if (*outPort == fluid_msg::of13::OFPP_IN_PORT)
-		    {
-			  Ptr<SdnPort> outputPort = m_portMap[inPort];
-			  outputPort->getConn()->sendOnNetDevice(packet);
-		    }
-		  else if (*outPort == fluid_msg::of13::OFPP_TABLE)
-			{
-			  HandlePacket (packet, inPort);
-			}
-		  else if (*outPort == fluid_msg::of13::OFPP_NORMAL)
-		    {
-			  // Normal L2/L3 switching?
-		    }
-		  else if(*outPort == fluid_msg::of13::OFPP_FLOOD)
-			{
-			  Flood(packet, inPort);
-			}
-		  else if(*outPort == fluid_msg::of13::OFPP_ALL)
-			{
-			  OutputAll(packet, inPort);
-			}
-		  else if (*outPort == fluid_msg::of13::OFPP_CONTROLLER)
-		    {
-			  // Send to controller with a reason
-			  uint8_t reason = (outPort + 1 == outPorts.end() ? fluid_msg::of13::OFPR_NO_MATCH : fluid_msg::of13::OFPR_ACTION);
-		      SendPacketInToController(packet, m_portMap[inPort]->getDevice (), reason);
-		    }
-		  else if (*outPort == fluid_msg::of13::OFPP_LOCAL)
-		    {
-			  // Local openflow port?
-		    }
-		  else if (*outPort == fluid_msg::of13::OFPP_ANY)
-			{
-			  // Should never be used outside flow mods and flow stats requests
-			}
-		  continue;
-	    }
-	  if (m_portMap.count(*outPort) != 0)
-		{
-		  Ptr<SdnPort> outputPort = m_portMap[*outPort]; //Might be wrong?
-		  outputPort->getConn()->sendOnNetDevice(packet);
-		}
-    }
+
+  if (!outPorts.empty())
+  {
+	  HandlePorts (packet, outPorts, inPort);
+  }
 
   return 0;
+}
+
+void SdnSwitch13::HandlePorts (Ptr<Packet> packet, std::vector<uint32_t> outPorts, uint32_t inPort)
+{
+	  for (std::vector<uint32_t>::iterator outPort = outPorts.begin(); outPort != outPorts.end(); ++outPort)
+	    {
+		  if (*outPort > fluid_msg::of13::OFPP_MAX)
+		    {
+			  if (*outPort == fluid_msg::of13::OFPP_IN_PORT)
+			    {
+				  Ptr<SdnPort> outputPort = m_portMap[inPort];
+				  outputPort->getConn()->sendOnNetDevice(packet);
+			    }
+			  else if (*outPort == fluid_msg::of13::OFPP_TABLE)
+				{
+				  HandlePacket (packet, inPort);
+				}
+			  else if (*outPort == fluid_msg::of13::OFPP_NORMAL)
+			    {
+				  // Normal L2/L3 switching?
+			    }
+			  else if(*outPort == fluid_msg::of13::OFPP_FLOOD)
+				{
+				  Flood(packet, inPort);
+				}
+			  else if(*outPort == fluid_msg::of13::OFPP_ALL)
+				{
+				  OutputAll(packet, inPort);
+				}
+			  else if (*outPort == fluid_msg::of13::OFPP_CONTROLLER)
+			    {
+				  // Send to controller with a reason
+				  uint8_t reason = (outPort + 1 == outPorts.end() ? fluid_msg::of13::OFPR_NO_MATCH : fluid_msg::of13::OFPR_ACTION);
+			      SendPacketInToController(packet, m_portMap[inPort]->getDevice (), reason);
+			    }
+			  else if (*outPort == fluid_msg::of13::OFPP_LOCAL)
+			    {
+				  // Local openflow port?
+			    }
+			  else if (*outPort == fluid_msg::of13::OFPP_ANY)
+				{
+				  // Should never be used outside flow mods and flow stats requests
+				}
+			  continue;
+		    }
+		  if (m_portMap.count(*outPort) != 0)
+			{
+			  Ptr<SdnPort> outputPort = m_portMap[*outPort]; //Might be wrong?
+			  outputPort->getConn()->sendOnNetDevice(packet);
+			}
+	    }
 }
 
 void SdnSwitch13::OFHandle_Hello_Request (fluid_msg::OFMsg* message)
@@ -544,53 +695,11 @@ void SdnSwitch13::OFHandle_Packet_Out(uint8_t* buffer)
   
   fluid_msg::ActionList action_list = packetOut->actions();
   outPorts = m_flowTable13->handleActions (packet, &action_list);
-  for (std::vector<uint32_t>::iterator outPort = outPorts.begin(); outPort != outPorts.end(); ++outPort)
-    {
-	  if (*outPort > fluid_msg::of13::OFPP_MAX)
-	    {
-		  if (*outPort == fluid_msg::of13::OFPP_IN_PORT)
-		    {
-			  Ptr<SdnPort> outputPort = m_portMap[inPort];
-			  outputPort->getConn()->sendOnNetDevice(packet);
-		    }
-		  else if (*outPort == fluid_msg::of13::OFPP_TABLE)
-			{
-			  HandlePacket (packet, inPort);
-			}
-		  else if (*outPort == fluid_msg::of13::OFPP_NORMAL)
-		    {
-			  // Normal L2/L3 switching?
-		    }
-		  else if(*outPort == fluid_msg::of13::OFPP_FLOOD)
-			{
-			  Flood(packet, inPort);
-			}
-		  else if(*outPort == fluid_msg::of13::OFPP_ALL)
-			{
-			  OutputAll(packet, inPort);
-			}
-		  else if (*outPort == fluid_msg::of13::OFPP_CONTROLLER)
-		    {
-			  // Send to controller with a reason
-			  uint8_t reason = (outPort + 1 == outPorts.end() ? fluid_msg::of13::OFPR_NO_MATCH : fluid_msg::of13::OFPR_ACTION);
-		      SendPacketInToController(packet, m_portMap[inPort]->getDevice (), reason);
-		    }
-		  else if (*outPort == fluid_msg::of13::OFPP_LOCAL)
-		    {
-			  // Local openflow port?
-		    }
-		  else if (*outPort == fluid_msg::of13::OFPP_ANY)
-			{
-			  // Should never be used outside flow mods and flow stats requests
-			}
-		  continue;
-	    }
-	  if (m_portMap.count(*outPort) != 0)
-		{
-		  Ptr<SdnPort> outputPort = m_portMap[*outPort]; //Might be wrong?
-		  outputPort->getConn()->sendOnNetDevice(packet);
-		}
-    }
+
+  if (!outPorts.empty())
+  {
+	  HandlePorts (packet, outPorts, inPort);
+  }
 }
 
 void SdnSwitch13::SendPacketInToController(Ptr<Packet> packet, Ptr<NetDevice> device, uint8_t reason)
@@ -689,6 +798,16 @@ void SdnSwitch13::OutputAll(Ptr<Packet> packet, uint32_t portNum)
   }
 }
 
+uint64_t SdnSwitch13::GetMacAddress ()
+{
+  NS_LOG_FUNCTION (this);
+  uint8_t buffer[6];
+  m_controllerConn->get_device ()->GetAddress ().CopyTo (buffer);
+  uint64_t returnWord = 0;
+  memcpy (&returnWord,buffer,6);
+  return returnWord;
+}
+
 uint32_t SdnSwitch13::GetCapabilities ()
 {
   NS_LOG_FUNCTION (this);
@@ -707,4 +826,16 @@ bool SdnSwitch13::NegotiateVersion (fluid_msg::OFMsg* msg)
   return msg->version () == fluid_msg::of13::OFP_VERSION;
 }
 
+uint16_t SdnSwitch13::getNewPortNumber ()
+{
+  NS_LOG_FUNCTION (this);
+  TOTAL_PORTS++;
+  return TOTAL_PORTS == OFCONTROLLERPORT ? ++TOTAL_PORTS : TOTAL_PORTS;
+}
+
+uint32_t SdnSwitch13::getNewDatapathID ()
+{
+  ++TOTAL_DATAPATH_IDS;
+  return TOTAL_DATAPATH_IDS;
+}
 }

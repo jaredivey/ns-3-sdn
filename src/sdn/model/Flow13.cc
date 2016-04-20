@@ -106,8 +106,9 @@ static fluid_msg::of13::IPv6Exthdr *bipv6exthdr = NULL;
 static bool
 match_ (fluid_msg::of13::Match a, fluid_msg::of13::Match b, match_func cur_func)
 {
-	uint16_t alen = a.oxm_fields_len() - fluid_msg::of13::OFP_OXM_HEADER_LEN;
-	uint16_t blen = b.oxm_fields_len() - fluid_msg::of13::OFP_OXM_HEADER_LEN;
+
+	uint16_t alen = a.oxm_fields_len();// - fluid_msg::of13::OFP_OXM_HEADER_LEN;
+	uint16_t blen = b.oxm_fields_len();// - fluid_msg::of13::OFP_OXM_HEADER_LEN;
 	uint8_t aval8, bval8, amask8, bmask8;
 	bool matched = true;
 	for (uint32_t j = 0; alen > 0 && blen > 0; ++j)
@@ -117,10 +118,12 @@ match_ (fluid_msg::of13::Match a, fluid_msg::of13::Match b, match_func cur_func)
 		const fluid_msg::of13::OXMTLV &const_bptr = *(b.oxm_field(j));
 		if (aptr)
 		{
-			alen -= aptr->length ();
+                        uint8_t current_length = aptr->length();
+
+			alen = alen - current_length - fluid_msg::of13::OFP_OXM_HEADER_LEN;
 			if (bptr)
 			{
-				blen -= bptr->length ();
+				blen = blen - bptr->length () - fluid_msg::of13::OFP_OXM_HEADER_LEN;
 				if (aptr->class_ () == fluid_msg::of13::OFPXMC_OPENFLOW_BASIC &&
 						bptr->class_ () == fluid_msg::of13::OFPXMC_OPENFLOW_BASIC)
 				{
