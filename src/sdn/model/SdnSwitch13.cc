@@ -346,6 +346,10 @@ void SdnSwitch13::HandleReadController (Ptr<Socket> socket)
         {
           OFHandle_Barrier_Request(buffer);
         }
+      if (message->type() == fluid_msg::of13::OFPT_MULTIPART_REQUEST)
+       {
+    	  OFHandle_Multipart_Request(buffer);
+       }
       delete (message);
     }
 }
@@ -470,11 +474,6 @@ void SdnSwitch13::OFHandle_Hello_Request (fluid_msg::OFMsg* message)
 void SdnSwitch13::OFHandle_Feature_Request (fluid_msg::OFMsg* message)
 {
   NS_LOG_FUNCTION (this << message);
-  std::vector<fluid_msg::of10::Port> fluidPorts;
-  for(std::map<uint32_t, Ptr<SdnPort> >::iterator i = m_portMap.begin(); i != m_portMap.end(); ++i)
-  {
-    fluidPorts.push_back(i->second->getFluidPort());
-  }
 
   fluid_msg::of13::FeaturesReply* featuresReply =
     new fluid_msg::of13::FeaturesReply (message->xid (),
@@ -567,6 +566,32 @@ void SdnSwitch13::OFHandle_Group_Mod(uint8_t* buffer)
             break;
         }
     }
+}
+
+void SdnSwitch13::OFHandle_Multipart_Request(uint8_t* buffer)
+{
+	  NS_LOG_FUNCTION (this << buffer);
+	  fluid_msg::of13::MultipartRequest* multipartRequest = new fluid_msg::of13::MultipartRequest ();
+	  multipartRequest->unpack(buffer);
+	  if (multipartRequest->mpart_type()==fluid_msg::of13::OFPMP_PORT_DESC)
+	  {
+		  std::vector<fluid_msg::of13::Port> fluidPorts;
+		  for(std::map<uint32_t, Ptr<SdnPort> >::iterator i = m_portMap.begin(); i != m_portMap.end(); ++i)
+		  {
+			  fluid_msg::of10::Port curPort (i->second->getFluidPort());
+			  uint32_t curr_speed =0;
+			  uint32_t max_speed=0;
+			  std::cout<< curPort.port_no()<<std::endl;
+			  fluid_msg::of13::Port makePort (
+					  (uint32_t)curPort.port_no(),curPort.hw_addr(), curPort.name(), curPort.config(), curPort.state(),
+					  curPort.curr(), curPort.advertised(), curPort.supported(), curPort.peer(), curr_speed, max_speed );
+			  std::cout<<makePort.port_no()<<std::endl;
+		      fluidPorts.push_back(makePort);
+		  }
+	      fluid_msg::of13::MultipartReplyPortDescription* multipartReplyPortDesc =
+			  new fluid_msg::of13::MultipartReplyPortDescription(multipartRequest ->xid(),multipartRequest->flags(),fluidPorts);
+	      m_controllerConn->send (multipartReplyPortDesc);
+	  }
 }
 
 void SdnSwitch13::addFlow(fluid_msg::of13::FlowMod* message)
@@ -670,6 +695,13 @@ void SdnSwitch13::OFHandle_Packet_Out(uint8_t* buffer)
   fluid_msg::of_error status = packetOut->unpack(buffer);
   NS_ASSERT (status != fluid_msg::OF_ERROR);
 
+  size_t structSize = sizeof(struct fluid_msg::of13::ofp_packet_out);
+  uint8_t *testP = buffer + structSize;
+
+  fluid_msg::ActionList testActions;
+  testActions.length(packetOut->actions_len());
+  testActions.unpack13(testP);
+
   Ptr<Packet> packet;
   uint32_t inPort = packetOut->in_port();
   // Buffer ID == -1 => PacketOut should contain packet.
@@ -693,7 +725,7 @@ void SdnSwitch13::OFHandle_Packet_Out(uint8_t* buffer)
     }
   std::vector<uint32_t> outPorts;
   
-  fluid_msg::ActionList action_list = packetOut->actions();
+  fluid_msg::ActionList action_list = testActions;
   outPorts = m_flowTable13->handleActions (packet, &action_list);
 
   if (!outPorts.empty())
@@ -725,6 +757,7 @@ void SdnSwitch13::SendPacketInToController(Ptr<Packet> packet, Ptr<NetDevice> de
 	{
 	  newId = m_bufferIdStream->GetInteger ();
 	} while (m_packetBuffers.count (newId) == 1);
+      std::cout<<"newId is "<<newId<<std::endl;
 
       m_packetBuffers[newId] = packet->Copy ();
       packetIn = new fluid_msg::of13::PacketIn(SdnCommon::GenerateXId(),
@@ -735,11 +768,24 @@ void SdnSwitch13::SendPacketInToController(Ptr<Packet> packet, Ptr<NetDevice> de
       packetIn = new fluid_msg::of13::PacketIn(SdnCommon::GenerateXId(),
     	  -1, packet->GetSize(), reason, 0, 0);
     }
+
+  m_flowTable13->DestructHeader(packet);
+  fluid_msg::of13::Match match = m_flowTable13->getPacketFields((uint32_t)port->getFluidPort().port_no());
+  m_flowTable13->RestructHeader(packet);
+
+  for (uint8_t i=0; i<OXM_NUM; ++i){
+	  if (match.oxm_field(i))
+	    packetIn->add_oxm_field(match.oxm_field(i));
+
+  }
+
   uint8_t buffer[packet->GetSize ()];
   packet->CopyData (buffer,packet->GetSize ());
-  packetIn->data(buffer,packet->GetSize());
+  //packetIn->unpack(buffer);
+  packetIn->data(buffer,42);
 
   if (packetIn) m_controllerConn->send(packetIn);
+ // delete(packetIn);
 }
 
 void SdnSwitch13::SendFlowRemovedMessageToController(Flow13 flow, uint8_t reason)

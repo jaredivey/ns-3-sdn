@@ -184,6 +184,7 @@ private:
   TempHeader<ArpHeader>  m_arpHeader;              //!< Private ArpHeader for grabbing information out of the packet
   TempHeader<TcpHeader>  m_tcpHeader;              //!< Private TcpHeader for grabbing information out of the packet
   TempHeader<UdpHeader>  m_udpHeader;              //!< Private UdpHeader for grabbing information out of the packet
+public:
   /**
    * \brief Creates a match object from the tempheader information 
    * \param inPort This field needs to go in the match in addition to the packet fields, but it is not
@@ -191,6 +192,18 @@ private:
    * \return A match object matching whatever information could be discerned from the current packet
    */
   fluid_msg::of13::Match getPacketFields (uint32_t inPort);
+  /**
+   * \brief Removes the TempHeaders from an actual packet so we can use them for analysis
+   * \param pkt The packet containing the headers we're interested in
+   * \return The Packet with the relevant headers removed
+   */
+  Ptr<Packet> DestructHeader (Ptr<Packet> pkt);
+  /**
+   * \brief Add the TempHeaders back onto a packet. Should always be called soon after DestructHeader
+   * \param pkt The destructed packet ready to be reconstructed
+   */
+  void RestructHeader (Ptr<Packet> pkt);
+private:
   /**
    * \brief Action handler for an output action
    * \param pkt The packet being modified from the action
@@ -203,17 +216,7 @@ private:
    * \param action The Group action being executed
    */
   std::vector<uint32_t> handleGroupAction (Ptr<Packet> pkt,fluid_msg::of13::GroupAction* action);
-  /**
-   * \brief Removes the TempHeaders from an actual packet so we can use them for analysis
-   * \param pkt The packet containing the headers we're interested in
-   * \return The Packet with the relevant headers removed
-   */
-  Ptr<Packet> DestructHeader (Ptr<Packet> pkt);
-  /**
-   * \brief Add the TempHeaders back onto a packet. Should always be called soon after DestructHeader
-   * \param pkt The destructed packet ready to be reconstructed
-   */
-  void RestructHeader (Ptr<Packet> pkt);
+
   /**
    * \brief Idle Time Out Event hook. Gets invoked whenever a flow has reached it's idle time without any activity.
    */
