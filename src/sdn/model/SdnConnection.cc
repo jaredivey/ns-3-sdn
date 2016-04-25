@@ -221,49 +221,80 @@ SdnConnection::set_version (uint8_t version)
 }
 
 uint32_t
-SdnConnection::send (void* data, size_t len)
+SdnConnection::send (void* data, size_t len, uint8_t version )
 {
   NS_LOG_FUNCTION (this << data << len);
 
   Ptr<Packet> packet = Create<Packet> ((uint8_t *)data, len);
 
-  return send (packet);
+  return send (packet, version);
 }
 
 void
-SdnConnection::StaggerSend (Ptr<Packet> p)
+SdnConnection::StaggerSend (Ptr<Packet> p, uint8_t version)
 {
-    send (p);
+    send (p, version);
 }
 
 uint32_t
 SdnConnection::send (fluid_msg::OFMsg* msg)
 {
   NS_LOG_FUNCTION (this << msg);
+  uint8_t version;
+  if (msg->version()== 1){
+	  version =1;
+  }
+  else if (msg->version() == 4){
+	  version =4;
+  }
+  else{
+	  version = 0;
+  }
+  return send (msg->pack(), msg->length(), version);
 
-  return send (msg->pack(), msg->length());
 }
 
 uint32_t
-SdnConnection::send(Ptr<Packet> p)
+SdnConnection::send(Ptr<Packet> p, uint8_t version )
 {
     Time currentTime = Simulator::Now ();
     Ptr<Packet> copyPacket = p->Copy ();
-   RColorTag rcolor;
-    rcolor.SetRColorValue(255);
-    copyPacket->AddPacketTag(rcolor);
+
+    RColorTag rcolor;
     GColorTag gcolor;
-    gcolor.SetGColorValue(0);
-    copyPacket->AddPacketTag(gcolor);
     BColorTag bcolor;
-    bcolor.SetBColorValue(255);
-    copyPacket->AddPacketTag(bcolor);
+
+    if (version == 1){
+        rcolor.SetRColorValue(255);
+        copyPacket->AddPacketTag(rcolor);
+        gcolor.SetGColorValue(0);
+        copyPacket->AddPacketTag(gcolor);
+        bcolor.SetBColorValue(255);
+        copyPacket->AddPacketTag(bcolor);
+    }
+    else if (version == 4){
+        rcolor.SetRColorValue(0);
+        copyPacket->AddPacketTag(rcolor);
+        gcolor.SetGColorValue(255);
+        copyPacket->AddPacketTag(gcolor);
+        bcolor.SetBColorValue(255);
+        copyPacket->AddPacketTag(bcolor);
+    }
+    else{
+        rcolor.SetRColorValue(255);
+        copyPacket->AddPacketTag(rcolor);
+        gcolor.SetGColorValue(255);
+        copyPacket->AddPacketTag(gcolor);
+        bcolor.SetBColorValue(0);
+        copyPacket->AddPacketTag(bcolor);
+    }
+
  
     if (currentTime == m_lastSendTime)
       {
         m_consecutivePause++;
         Simulator::ScheduleWithContext (m_id, MicroSeconds (m_consecutivePause),
-        	&SdnConnection::StaggerSend, this, copyPacket);
+        	&SdnConnection::StaggerSend, this, copyPacket, version);
         return copyPacket->GetSize ();
       }
     else

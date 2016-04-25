@@ -34,6 +34,7 @@
 
 //libfluid libraries
 #include <fluid/of10msg.hh>
+#include <fluid/of13msg.hh>
 #include <fluid/OFConnection.hh>
 
 //C++ Libraries
@@ -173,13 +174,13 @@ public:
   * \param len length of the binary data (in bytes)
   * \return Number of bytes sent. See ns3::Socket
   */
-  uint32_t send (void* data, size_t len);
+  uint32_t send (void* data, size_t len, uint8_t version = 0);
 
   /**
   * \brief Stagger sending of packets to account for difference in real time versus simulation time in controller applications
   * \param p Smart pointer to packet
   */
-  void StaggerSend (Ptr<Packet> p);
+  void StaggerSend (Ptr<Packet> p, uint8_t verion=0);
   /**
   * \brief Send an OFMsg to through the connection/Net Device.
   * \param msg A libfluid defined OFMsg that is predefined
@@ -191,7 +192,7 @@ public:
   * \param msg A libfluid defined OFMsg that is predefined
   * \return Number of bytes sent. See ns3::Socket
   */
-  uint32_t send (Ptr<Packet> p);
+  uint32_t send (Ptr<Packet> p, uint8_t version = 0);
   /**
   * \brief Send data directly to a netdevice, bypassing the socket. This chain calls into sendOnNetDevice(packet)
   * \param p Smart pointer to packet

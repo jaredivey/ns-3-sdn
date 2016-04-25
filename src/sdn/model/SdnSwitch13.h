@@ -276,6 +276,7 @@ protected:
    * \param buffer a byte buffer of the original message. Converted to a fluid_msg BarrierRequest class
    */
   virtual void OFHandle_Barrier_Request (uint8_t* buffer);
+  virtual void OFHandle_Multipart_Request(uint8_t* buffer);
   /**
    * \brief Add a flow to the flow table
    * \param message the original flowmod message. Contains the new flow to add
